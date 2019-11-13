@@ -70,7 +70,7 @@ resource "aws_backup_plan" "quarterly" {
   rule {
     rule_name         = "quarterly"
     target_vault_name = aws_backup_vault.quarterly.name
-    schedule          = "cron(0 0 L 3,6,9,12 * *)"
+    schedule          = "cron(0 0 L 3,6,9,12 ? *)"
 
     lifecycle {
       cold_storage_after = 365
