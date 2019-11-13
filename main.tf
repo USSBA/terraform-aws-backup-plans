@@ -16,7 +16,7 @@ data "aws_iam_policy_document" "service_link" {
 }
 
 resource "aws_iam_role" "service_role" {
-  name               = "example"
+  name               = "backup-service-role"
   assume_role_policy = data.aws_iam_policy_document.service_link.json
 }
 
