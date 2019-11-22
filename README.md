@@ -5,6 +5,17 @@
 A basic set of backup plans that can be consistantly created used accross the
 SBA organization.
 
+## Usage
+
+
+```
+module "backup-plans" {
+  source  = "USSBA/backup-plans/aws"
+  version = "~> 1.0.2"
+}
+```
+
+
 
 ## Contributing
 
