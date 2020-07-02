@@ -1,3 +1,6 @@
+# v3.0.0
+Terraform 0.13 Upgrade
+
 # v2.0.0
 
 Breaking Change: Adding "enabled" check to all resources, which changes the state name and will require delete/replace or manually adjusting the the terraform state
