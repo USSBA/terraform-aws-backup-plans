@@ -1,10 +1,3 @@
-terraform {
-  required_version = "~> 0.12.9"
-  required_providers {
-    aws = "~> 2.30"
-  }
-}
-
 data "aws_iam_policy_document" "service_link" {
   statement {
     actions = ["sts:AssumeRole"]
