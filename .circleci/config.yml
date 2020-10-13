@@ -1,32 +1,12 @@
 version: 2.1
 
 executors:
-  default:
-    docker:
-      - image: circleci/node
-  docker-awscli:
-    docker:
-      - image: ussba/cc-docker-git-aws
-  docker-poirot:
-    docker:
-      - image: ussba/poirot:3
-
-commands:
-  poirotscan:
-    steps:
-    - checkout
-    - run:
-        name: Scanning for PII (Poirot)
-        command: |
-          poirot --patterns https://raw.githubusercontent.com/USSBA/terraform-aws-backup-plans/master/poirot-patterns.txt --revlist="master^..HEAD"
-jobs:
-  poirot:
-    executor: docker-poirot
-    steps:
-    - poirotscan
-  terraform-format-check:
+  terraform:
     docker:
     - image: hashicorp/terraform:light
+jobs:
+  terraform-format-check:
+    executor: terraform
     steps:
     - checkout
     - run:
@@ -37,5 +17,4 @@ workflows:
   version: 2
   branch_workflow:
     jobs:
-    - poirot
     - terraform-format-check

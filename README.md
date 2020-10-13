@@ -2,30 +2,53 @@
 
 ## Description
 
-A basic set of backup plans that can be consistantly created used accross the
+A basic set of backup plans that can be consistantly created used across the
 SBA organization.
+
+### Features
+
+* Configures the AWS Backup service to run weekly and quarterly
+* Weekly backups are retained for 90 days
+* Quarterly backups are retained forever
+* Out of the box will look for tag key-values of `BackupQuarterly: true` and `BackupWeekly: true` to initiate a backup
+* Grants necessary service role permissions
 
 ## Usage
 
+### Super Simple
 
-```
+```terraform
 module "backup-plans" {
   source  = "USSBA/backup-plans/aws"
-  version = "~> 1.0.2"
+  version = "~> 2.0"
 }
 ```
 
+### A bit more customization
 
+```terraform
+module "backup-plans" {
+  source  = "USSBA/backup-plans/aws"
+  version = "~> 2.0"
+
+  # Disable quarterly backups
+  quarterly_backup_enabled = false
+
+  # Change the weekly backup tag key-value to `AutoBackups = very-yes` for triggering
+  weekly_backup_tag_key   = "AutoBackups"
+  weekly_backup_tag_value = "very-yes"
+}
+```
 
 ## Contributing
 
 We welcome contributions.
 To contribute please read our [CONTRIBUTING](CONTRIBUTING.md) document.
 
-<sub>All contributions are subject to the license and in no way imply compensation for contributions.</sub>
-
+All contributions are subject to the license and in no way imply compensation for contributions.
 
 ## Code of Conduct
+
 We strive for a welcoming and inclusive environment for all SBA projects.
 
 Please follow this guidelines in all interactions:
@@ -39,4 +62,4 @@ Please do not submit an issue on GitHub for a security vulnerability.
 Instead, contact the development team through [HQVulnerabilityManagement](mailto:HQVulnerabilityManagement@sba.gov).
 Be sure to include **all** pertinent information.
 
-<sub>The agency reserves the right to change this policy at any time.</sub>
+The agency reserves the right to change this policy at any time.
