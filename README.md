@@ -20,7 +20,7 @@ SBA organization.
 ```terraform
 module "backup-plans" {
   source  = "USSBA/backup-plans/aws"
-  version = "~> 2.0"
+  version = "~> 3.0"
 }
 ```
 
@@ -29,7 +29,7 @@ module "backup-plans" {
 ```terraform
 module "backup-plans" {
   source  = "USSBA/backup-plans/aws"
-  version = "~> 2.0"
+  version = "~> 3.0"
 
   # Disable quarterly backups
   quarterly_backup_enabled = false
