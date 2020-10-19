@@ -1,14 +1,17 @@
-# v3.0.0
+# Releases
+
+## v3.0.0
+
 Terraform 0.13 Upgrade
 
-# v2.0.0
+## v2.0.0
 
 Breaking Change: Adding "enabled" check to all resources, which changes the state name and will require delete/replace or manually adjusting the the terraform state
 
-# v1.0.1
+## v1.0.1
 
 BugFix: cron
 
-# v1.0.0
+## v1.0.0
 
 Initial Release
