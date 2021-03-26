@@ -40,6 +40,20 @@ module "backup-plans" {
 }
 ```
 
+### Cross-region
+
+To enable cross region copies of backup plans, you must set the `cross_region_backup_enabled` variable to true and optionally set the destination region (defaults to us-west-2)
+
+```
+module "backup-plans" {
+  source  = "USSBA/backup-plans/aws"
+  version = "~> 3.0"
+
+  cross_region_backup_enabled = true
+  cross_region_destination = "us-west-2"
+}
+```
+
 ## Contributing
 
 We welcome contributions.

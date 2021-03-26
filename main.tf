@@ -33,11 +33,20 @@ locals {
 resource "aws_backup_vault" "weekly" {
   count = local.weekly_backup_count
   name  = "weekly"
+  tags  = merge(var.tags, var.tags_vault)
+}
+
+resource "aws_backup_vault" "weekly_cross_region" {
+  count    = var.cross_region_backup_enabled ? local.weekly_backup_count : 0
+  name     = "weekly_cross_region"
+  tags     = merge(var.tags, var.tags_vault)
+  provider = aws.cross-region
 }
 
 resource "aws_backup_plan" "weekly" {
   count = local.weekly_backup_count
   name  = "weekly"
+  tags  = merge(var.tags, var.tags_plan)
 
   rule {
     rule_name         = "weekly"
@@ -46,6 +55,15 @@ resource "aws_backup_plan" "weekly" {
 
     lifecycle {
       delete_after = 90
+    }
+    dynamic "copy_action" {
+      for_each = var.cross_region_backup_enabled ? ["copy backups to the new region"] : []
+      content {
+        destination_vault_arn = aws_backup_vault.weekly_cross_region[0].arn
+        lifecycle {
+          delete_after = 90
+        }
+      }
     }
   }
 }
@@ -72,11 +90,20 @@ locals {
 resource "aws_backup_vault" "quarterly" {
   count = local.quarterly_backup_count
   name  = "quarterly"
+  tags  = merge(var.tags, var.tags_vault)
+}
+
+resource "aws_backup_vault" "quarterly_cross_region" {
+  count    = var.cross_region_backup_enabled ? local.quarterly_backup_count : 0
+  name     = "quarterly_cross_region"
+  tags     = merge(var.tags, var.tags_vault)
+  provider = aws.cross-region
 }
 
 resource "aws_backup_plan" "quarterly" {
   count = local.quarterly_backup_count
   name  = "quarterly"
+  tags  = merge(var.tags, var.tags_plan)
 
   rule {
     rule_name         = "quarterly"
@@ -85,6 +112,15 @@ resource "aws_backup_plan" "quarterly" {
 
     lifecycle {
       cold_storage_after = 365
+    }
+    dynamic "copy_action" {
+      for_each = var.cross_region_backup_enabled ? ["copy backups to the new region"] : []
+      content {
+        destination_vault_arn = aws_backup_vault.quarterly_cross_region[0].arn
+        lifecycle {
+          cold_storage_after = 365
+        }
+      }
     }
   }
 }

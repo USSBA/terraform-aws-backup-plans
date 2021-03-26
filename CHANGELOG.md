@@ -3,6 +3,8 @@
 ## v3.2.0
 
 * Adding in region config for backup services with `aws_backup_region_settings`
+* Adding in feature to allow cross-region backup copies
+* Add tagging to tagable resources
 
 ## v3.1.0
 
