@@ -7,3 +7,8 @@ terraform {
     }
   }
 }
+
+provider "aws" {
+  alias  = "cross-region"
+  region = var.cross_region_destination
+}
