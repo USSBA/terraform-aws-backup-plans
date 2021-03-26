@@ -101,3 +101,16 @@ resource "aws_backup_selection" "quarterly" {
     value = var.quarterly_backup_tag_value
   }
 }
+
+resource "aws_backup_region_settings" "opt_in" {
+  resource_type_opt_in_preference = {
+    "DynamoDB"        = true
+    "Aurora"          = true
+    "EBS"             = true
+    "EC2"             = true
+    "EFS"             = true
+    "FSx"             = true
+    "RDS"             = true
+    "Storage Gateway" = true
+  }
+}
