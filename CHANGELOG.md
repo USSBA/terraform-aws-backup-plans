@@ -1,5 +1,8 @@
 # Releases
 
+## v3.3.0
+* Adding daily backup vault and configuration settings
+
 ## v3.2.0
 
 * Adding in region config for backup services with `aws_backup_region_settings`
