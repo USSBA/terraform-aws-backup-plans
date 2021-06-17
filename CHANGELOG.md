@@ -1,5 +1,8 @@
 # Releases
 
+## v3.4.0
+* Bump to support terraform v1.0
+
 ## v3.3.0
 * Adding daily backup vault and configuration settings
 
