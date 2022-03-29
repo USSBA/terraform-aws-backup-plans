@@ -197,5 +197,9 @@ resource "aws_backup_region_settings" "opt_in" {
     "FSx"             = true
     "RDS"             = true
     "Storage Gateway" = true
+    "S3"              = true
+    "VirtualMachine"  = true
+    "Neptune"         = true
+    "DocumentDB"      = true
   }
 }
