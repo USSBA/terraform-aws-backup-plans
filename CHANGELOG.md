@@ -1,5 +1,8 @@
 # Releases
 
+## v3.4.1
+* Adding backup support for the following resources: DocumentDB, Neptune, S3 and VirtualMachine
+
 ## v3.4.0
 * Bump to support terraform v1.0
 
