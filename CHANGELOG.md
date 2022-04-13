@@ -1,5 +1,10 @@
 # Releases
 
+## v4.0.0
+
+- ** BREAKING CHANGES **
+  - Bumped AWS provider version to `>=4.0, < 5.0`
+
 ## v3.4.1
 * Adding backup support for the following resources: DocumentDB, Neptune, S3 and VirtualMachine
 
