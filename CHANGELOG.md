@@ -1,5 +1,9 @@
 # Releases
 
+## v4.0.1
+
+- Added missing s3 permissions necessary for the aws backup service.
+
 ## v4.0.0
 
 - ** BREAKING CHANGES **
