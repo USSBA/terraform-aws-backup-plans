@@ -3,6 +3,16 @@ variable "enabled" {
   description = "enable/disable creation of all resources in this module"
   default     = true
 }
+variable "start_window_minutes" {
+  type        = number
+  description = "Amount if time (in minutes) before starting a backup job"
+  default     = 60
+}
+variable "completion_window_minutes" {
+  type        = number
+  description = "Amount of time (in minutes) a backup job can run before it is automatically canceled"
+  default     = 180
+}
 
 # cross region settings
 variable "cross_region_backup_enabled" {

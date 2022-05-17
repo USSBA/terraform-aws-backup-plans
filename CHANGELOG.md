@@ -1,5 +1,11 @@
 # Releases
 
+# v4.0.2
+
+- Added two new variables with defaulting values:
+  - `start_window` -> Amount of time (in minutes) before starting a backup job
+  - `completion_window` -> Amount of time (in minutes) a job can run before it is canceled
+
 ## v4.0.1
 
 - Added missing s3 permissions necessary for the aws backup service.
