@@ -61,6 +61,8 @@ resource "aws_backup_plan" "daily" {
     rule_name         = "daily"
     target_vault_name = aws_backup_vault.daily[0].name
     schedule          = "cron(0 8 ? * * *)"
+    start_window      = var.start_window_minutes
+    completion_window = var.completion_window_minutes
 
     lifecycle {
       delete_after = 30
@@ -112,6 +114,8 @@ resource "aws_backup_plan" "weekly" {
     rule_name         = "weekly"
     target_vault_name = aws_backup_vault.weekly[0].name
     schedule          = "cron(0 0 ? * SUN *)"
+    start_window      = var.start_window_minutes
+    completion_window = var.completion_window_minutes
 
     lifecycle {
       delete_after = 90
@@ -163,6 +167,8 @@ resource "aws_backup_plan" "quarterly" {
     rule_name         = "quarterly"
     target_vault_name = aws_backup_vault.quarterly[0].name
     schedule          = "cron(0 0 L 3,6,9,12 ? *)"
+    start_window      = var.start_window_minutes
+    completion_window = var.completion_window_minutes
 
     lifecycle {
       cold_storage_after = 365
