@@ -1,6 +1,7 @@
 # Local Vars
 locals {
   enabled_count = var.enabled ? 1 : 0
+  enabled_notification_count = var.enabled && length(var.vault_notification_sns_topic_arn) > 0 ? 1 : 0
 
   daily_backup_enabled = var.enabled && var.daily_backup_enabled
   daily_backup_count   = var.enabled && var.daily_backup_enabled ? 1 : 0
@@ -200,17 +201,67 @@ resource "aws_backup_selection" "quarterly" {
 # Opt-In Settings
 resource "aws_backup_region_settings" "opt_in" {
   resource_type_opt_in_preference = {
-    "DynamoDB"        = true
-    "Aurora"          = true
-    "EBS"             = true
-    "EC2"             = true
-    "EFS"             = true
-    "FSx"             = true
-    "RDS"             = true
-    "Storage Gateway" = true
-    "S3"              = true
-    "VirtualMachine"  = true
-    "Neptune"         = true
-    "DocumentDB"      = true
+    "CloudFormation"         = true
+    "DocumentDB"             = true
+    "DynamoDB"               = true
+    "Aurora"                 = true
+    "EBS"                    = true
+    "EC2"                    = true
+    "EFS"                    = true
+    "FSx"                    = true
+    "Neptune"                = true
+    "RDS"                    = true
+    "Redshift"               = true
+    "SAP HANA on Amazon EC2" = true
+    "Storage Gateway"        = true
+    "S3"                     = true
+    "Timestream"             = true
+    "VirtualMachine"         = true
   }
 }
+
+# Vault Notifications
+data "aws_iam_policy_document" "vault_notification" {
+  count = local.enabled_notification_count
+  statement {
+    actions = ["sns:Publish", "sns:Subscribe"]
+    #principals {
+    #  type        = "Service"
+    #  identifiers = ["backup.amazonaws.com"]
+    #}
+    resources = [
+      var.vault_notification_sns_topic_arn,
+    ]
+  }
+}
+resource "aws_iam_policy" "vault_notification" {
+  count       = local.enabled_notification_count
+  name        = "backup-vault-notifications"
+  path        = "/"
+  description = "Vault Notifications"
+  policy      = data.aws_iam_policy_document.vault_notification[0].json
+}
+resource "aws_iam_role_policy_attachment" "vault_notification" {
+  count      = local.enabled_notification_count
+  policy_arn = aws_iam_policy.vault_notification[0].arn
+  role       = aws_iam_role.service_role[0].name
+}
+resource "aws_backup_vault_notifications" "daily" {
+  count               = local.enabled_notification_count
+  backup_vault_name   = aws_backup_vault.daily[0].name
+  sns_topic_arn       = var.vault_notification_sns_topic_arn
+  backup_vault_events = var.vault_notification_events
+}
+resource "aws_backup_vault_notifications" "weekly" {
+  count               = local.enabled_notification_count
+  backup_vault_name   = aws_backup_vault.weekly[0].name
+  sns_topic_arn       = var.vault_notification_sns_topic_arn
+  backup_vault_events = var.vault_notification_events
+}
+resource "aws_backup_vault_notifications" "quarterly" {
+  count               = local.enabled_notification_count
+  backup_vault_name   = aws_backup_vault.weekly[0].name
+  sns_topic_arn       = var.vault_notification_sns_topic_arn
+  backup_vault_events = var.vault_notification_events
+}
+

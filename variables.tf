@@ -13,6 +13,28 @@ variable "completion_window_minutes" {
   description = "Amount of time (in minutes) a backup job can run before it is automatically canceled"
   default     = 180
 }
+variable "vault_notification_sns_topic_arn" {
+  type        = string
+  description = "Topic ARN where vault notifications will be directed"
+  default     = ""
+}
+#https://docs.aws.amazon.com/aws-backup/latest/devguide/sns-notifications.html
+variable "vault_notification_events" {
+  type        = list(string)
+  description = "List of vault notification events. See https://docs.aws.amazon.com/aws-backup/latest/devguide/sns-notifications.html"
+  default     = [
+    "BACKUP_JOB_STARTED",
+    "BACKUP_JOB_COMPLETED",
+    "COPY_JOB_STARTED",
+    "COPY_JOB_SUCCESSFUL",
+    "COPY_JOB_FAILED",
+    "RESTORE_JOB_STARTED",
+    "RESTORE_JOB_COMPLETED",
+    "RECOVERY_POINT_MODIFIED",
+    "S3_BACKUP_OBJECT_FAILED",
+    "S3_RESTORE_OBJECT_FAILED",
+  ]
+}
 
 # cross region settings
 variable "cross_region_backup_enabled" {
