@@ -199,18 +199,5 @@ resource "aws_backup_selection" "quarterly" {
 
 # Opt-In Settings
 resource "aws_backup_region_settings" "opt_in" {
-  resource_type_opt_in_preference = {
-    "DynamoDB"        = true
-    "Aurora"          = true
-    "EBS"             = true
-    "EC2"             = true
-    "EFS"             = true
-    "FSx"             = true
-    "RDS"             = true
-    "Storage Gateway" = true
-    "S3"              = true
-    "VirtualMachine"  = true
-    "Neptune"         = true
-    "DocumentDB"      = true
-  }
+  resource_type_opt_in_preference = var.opt_in_settings
 }

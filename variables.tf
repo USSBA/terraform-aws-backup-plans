@@ -13,6 +13,11 @@ variable "completion_window_minutes" {
   description = "Amount of time (in minutes) a backup job can run before it is automatically canceled"
   default     = 180
 }
+variable "opt_in_settings" {
+  type        = map(any)
+  description = "To see the region specific opt-in choices please use the aws `backup describe-region-settings` cli command. Default is `{}`"
+  default     = {}
+}
 
 # cross region settings
 variable "cross_region_backup_enabled" {
