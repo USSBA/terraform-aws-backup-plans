@@ -1,5 +1,11 @@
 # Releases
 
+# v5.0.0
+
+- The module user now has full control over the opt-in settings as the options can vary by region.
+- Please use the `aws backup describe-region-settings` to get the list of preferences by region.
+- [BREAKING] When upgrading from prior versions to 5.0 the `opt_in_settings` variable must be provided to the module.
+
 # v4.0.2
 
 - Added two new variables with defaulting values:
