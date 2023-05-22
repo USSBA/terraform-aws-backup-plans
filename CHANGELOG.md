@@ -1,5 +1,9 @@
 # Releases
 
+# v5.1.0
+- A new optional variable `sns_topic_arn` has been added.
+- When an `sns_topic_arn` is provided each vault will subscribe and send `modified` and `failure` events.
+
 # v5.0.0
 
 - The module user now has full control over the opt-in settings as the options can vary by region.
