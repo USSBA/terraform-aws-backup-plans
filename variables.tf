@@ -98,3 +98,10 @@ variable "tags_plan" {
   description = "Optional; Map of key-value tags to apply to all backup plans"
   default     = {}
 }
+
+# vault notifications
+variable "sns_topic_arn" {
+  type        = string
+  description = "Optional: Topic ARN where backup vault notifications are directed."
+  default     = ""
+}
