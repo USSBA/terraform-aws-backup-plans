@@ -1,0 +1,12 @@
+affirmer
+AutoBackups
+BugFix
+config
+cron
+DocumentDB
+HQVulnerabilityManagement
+taggable
+Terraform
+terraform
+USSBA
+VirtualMachine

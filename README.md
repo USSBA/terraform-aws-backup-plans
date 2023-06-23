@@ -2,7 +2,7 @@
 
 ## Description
 
-A basic set of backup plans that can be consistantly created used across the
+A basic set of backup plans that can be consistently created used across the
 SBA organization.
 
 ### Features
