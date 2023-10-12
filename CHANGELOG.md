@@ -1,5 +1,8 @@
 # Releases
 
+# v6.0.0
+- Module now requires terraform~>1.5 and provider~>5.0
+
 # v5.1.0
 - A new optional variable `sns_topic_arn` has been added.
 - When an `sns_topic_arn` is provided each vault will subscribe and send `modified` and `failure` events.
