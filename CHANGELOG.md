@@ -1,5 +1,12 @@
 # Releases
 
+# v7.0.0
+- [BREAKING] Module now requires terraform ~> 1.9
+- We have added necessary roles to the backup policy
+  - AWSBackupServiceRolePolicyForS3Restore
+  - AWSBackupServiceRolePolicyForRestores
+- Module now can handle restore to s3 and EFS mounts. 
+
 # v6.0.0
 - Module now requires terraform~>1.5 and provider~>5.0
 
