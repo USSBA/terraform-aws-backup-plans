@@ -18,30 +18,30 @@ jobs:
   format:
     runs-on: 'ubuntu-latest'
     steps:
-      # checkout the code
+      # Checkout the code
       - name: 'checkout'
         uses: 'actions/checkout@v3'
-      # if necessary can install a specific version of terraform
-      #- name: 'Install Terraform 1.0.9'
-      #  uses: 'hashicorp/setup-terraform@v2'
-      #  with:
-      #    terraform_version: '1.0.9'
-      # check the terraform formatting
+      # Install Terraform
+      - name: 'Install Terraform'
+        uses: 'hashicorp/setup-terraform@v2'
+        with:
+          terraform_version: '1.9.5'
+      # Check the Terraform formatting
       - name: 'check formatting'
         run: |
           terraform fmt -check -recursive
   validate:
     runs-on: 'ubuntu-latest'
     steps:
-      # checkout the code
+      # Checkout the code
       - name: 'checkout'
         uses: 'actions/checkout@v3'
-      # if necessary can install a specific version of terraform
-      #- name: 'Install Terraform 1.0.9'
-      #  uses: 'hashicorp/setup-terraform@v2'
-      #  with:
-      #    terraform_version: '1.0.9'
-      # validate the module can compile
+      # Install Terraform
+      - name: 'Install Terraform 1.9.5'
+        uses: 'hashicorp/setup-terraform@v2'
+        with:
+          terraform_version: '1.9.5'
+      # Validate the module can compile
       - name: 'validate module'
         run: |
           terraform init
@@ -49,10 +49,10 @@ jobs:
   spellcheck:
     runs-on: 'ubuntu-latest'
     steps:
-      # checkout the code
+      # Checkout the code
       - name: 'checkout'
         uses: 'actions/checkout@v3'
-      # perform a spellcheck on the markdown
+      # Perform a spellcheck on the markdown files
       # https://github.com/marketplace/actions/github-spellcheck-action
       - name: 'Spellcheck'
         uses: 'rojopolis/spellcheck-github-actions@0.33.0'

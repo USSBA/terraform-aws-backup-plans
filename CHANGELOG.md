@@ -1,26 +1,34 @@
 # Releases
 
-# v7.0.0
-- [BREAKING] Module now requires terraform ~> 1.9
-- We have added necessary roles to the backup policy
+## v8.0.0
+
+- Removed functionality for weekly and monthly backup plans.
+- Adjusted daily backup lifecycle policy to 30 days in warm storage and then 90 days in cold storage before being removed.
+
+## v7.0.0
+
+- Module now requires `terraform ~> 1.9`
+- We have added necessary roles to the backup policy:
   - AWSBackupServiceRolePolicyForS3Restore
   - AWSBackupServiceRolePolicyForRestores
-- Module now can handle restore to s3 and EFS mounts. 
+- Module now can handle restore to s3 and EFS mounts.
 
-# v6.0.0
-- Module now requires terraform~>1.5 and provider~>5.0
+## v6.0.0
 
-# v5.1.0
+- Module now requires `terraform ~> 1.5` and `provider ~> 5.0`
+
+## v5.1.0
+
 - A new optional variable `sns_topic_arn` has been added.
 - When an `sns_topic_arn` is provided each vault will subscribe and send `modified` and `failure` events.
 
-# v5.0.0
+## v5.0.0
 
 - The module user now has full control over the opt-in settings as the options can vary by region.
 - Please use the `aws backup describe-region-settings` to get the list of preferences by region.
-- [BREAKING] When upgrading from prior versions to 5.0 the `opt_in_settings` variable must be provided to the module.
+- When upgrading from prior versions to 5.0 the `opt_in_settings` variable must be provided to the module.
 
-# v4.0.2
+## v4.0.2
 
 - Added two new variables with defaulting values:
   - `start_window` -> Amount of time (in minutes) before starting a backup job
@@ -32,40 +40,42 @@
 
 ## v4.0.0
 
-- ** BREAKING CHANGES **
-  - Bumped AWS provider version to `>=4.0, < 5.0`
+- Bumped AWS provider version to `>=4.0, < 5.0`
 
 ## v3.4.1
-* Adding backup support for the following resources: DocumentDB, Neptune, S3 and VirtualMachine
+
+- Adding backup support for the following resources: DocumentDB, Neptune, S3 and VirtualMachine
 
 ## v3.4.0
-* Bump to support terraform v1.0
+
+- Bump to support terraform v1.0
 
 ## v3.3.0
-* Adding daily backup vault and configuration settings
+
+- Adding daily backup vault and configuration settings
 
 ## v3.2.0
 
-* Adding in region config for backup services with `aws_backup_region_settings`
-* Adding in feature to allow cross-region backup copies
-* Add tagging to taggable resources
+- Adding in region config for backup services with `aws_backup_region_settings`
+- Adding in feature to allow cross-region backup copies
+- Add tagging to taggable resources
 
 ## v3.1.0
 
-* Support for Terraform versions 0.13 and above to (but not including) 1.0
+- Support for Terraform versions 0.13 and above to (but not including) 1.0
 
 ## v3.0.0
 
-* Terraform 0.13 Upgrade
+- Terraform 0.13 Upgrade
 
 ## v2.0.0
 
-* Breaking Change: Adding "enabled" check to all resources, which changes the state name and will require delete/replace or manually adjusting the the terraform state
+- Adding "enabled" check to all resources, which changes the state name and will require delete/replace or manually adjusting the the terraform state
 
 ## v1.0.1
 
-* BugFix: cron
+- BugFix: cron
 
 ## v1.0.0
 
-* Initial Release
+- Initial Release
