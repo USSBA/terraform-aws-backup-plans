@@ -5,6 +5,12 @@ variable "enabled" {
   default     = true
 }
 
+variable "service_role_name" {
+  type        = string
+  description = "Optional; Name of the IAM role to be created for AWS Backup. If not specified, a name will be generated using the format 'backup-service-role-{vault_name}'"
+  default     = ""
+}
+
 variable "start_window_minutes" {
   type        = number
   description = "Optional; Amount of time (in minutes) before starting a backup job. Defaults to 60."
@@ -55,11 +61,43 @@ variable "daily_backup_tag_value" {
   default     = "true"
 }
 
+# Vault Settings
+variable "vault_name" {
+  type        = string
+  description = "Optional; Name of the backup vault to create. Defaults to 'DefaultBackupVault'."
+  default     = "DefaultBackupVault"
+}
+
+variable "backup_schedule" {
+  type        = string
+  description = "Optional; Cron expression defining the backup schedule. Defaults to 'cron(0 5 * * ? *)' (daily at 5 AM UTC)."
+  default     = "cron(0 5 * * ? *)"
+}
+
 # Vault Notifications
 variable "sns_topic_arn" {
   type        = string
   description = "Optional; Topic ARN where backup vault notifications are directed."
   default     = ""
+}
+
+# Backup Resource Types
+variable "backup_resource_types" {
+  type        = list(string)
+  description = "List of resource types to back up (e.g., 'AWS::EC2::Volume', 'AWS::RDS::DBInstance'). Used when use_tags is false."
+  default     = []
+}
+
+variable "use_tags" {
+  type        = bool
+  description = "Whether to use tag-based selection for backup resources. If false, uses explicit resource types instead."
+  default     = true
+}
+
+variable "backup_resource_tags" {
+  type        = map(any)
+  description = "Optional; Key-value map of tags for selecting resources to back up. Used when use_tags is true."
+  default     = {}
 }
 
 # Tags
@@ -79,4 +117,15 @@ variable "tags_plan" {
   type        = map(any)
   description = "Optional; Key-value map of tags for backup plans."
   default     = {}
+}
+
+variable "additional_managed_policies" {
+  type        = list(string)
+  description = "Optional; List of up to 18 additional IAM policy ARNs to attach to the backup service role. These will be combined with the required AWS Backup policies for a total of up to 20 policies."
+  default     = []
+
+  validation {
+    condition     = length(var.additional_managed_policies) <= 18
+    error_message = "A maximum of 18 additional managed policies can be specified (20 total including required AWS Backup policies)."
+  }
 }

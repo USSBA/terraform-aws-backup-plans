@@ -6,28 +6,28 @@
 resource "aws_backup_vault" "daily" {
   count = local.daily_backup_count
 
-  name = "daily"
+  name = var.vault_name
   tags = merge(var.tags, var.tags_vault)
 }
 
 resource "aws_backup_vault" "daily_cross_region" {
-  count = var.cross_region_backup_enabled ? local.daily_backup_count : 0
+  count = local.create_cross_region_resources ? 1 : 0
 
-  name     = "daily_cross_region"
+  name     = "${var.vault_name}-cross-region"
   tags     = merge(var.tags, var.tags_vault)
-  provider = aws.cross-region
+  provider = aws.cross_region
 }
 
 resource "aws_backup_plan" "daily" {
   count = local.daily_backup_count
 
-  name = "daily"
+  name = var.vault_name
   tags = merge(var.tags, var.tags_plan)
 
   rule {
     rule_name         = "daily"
     target_vault_name = aws_backup_vault.daily[0].name
-    schedule          = "cron(0 8 ? * * *)"
+    schedule          = var.backup_schedule
     start_window      = var.start_window_minutes
     completion_window = var.completion_window_minutes
 
@@ -37,7 +37,7 @@ resource "aws_backup_plan" "daily" {
     }
 
     dynamic "copy_action" {
-      for_each = var.cross_region_backup_enabled ? ["copy backups to the new region"] : []
+      for_each = local.create_cross_region_resources ? ["copy backups to the new region"] : []
       content {
         destination_vault_arn = aws_backup_vault.daily_cross_region[0].arn
 
@@ -54,12 +54,39 @@ resource "aws_backup_selection" "daily" {
   count = local.daily_backup_count
 
   iam_role_arn = aws_iam_role.service_role[0].arn
-  name         = "daily"
+  name         = var.vault_name
   plan_id      = aws_backup_plan.daily[0].id
 
-  selection_tag {
-    type  = "STRINGEQUALS"
-    key   = var.daily_backup_tag_key
-    value = var.daily_backup_tag_value
+  dynamic "selection_tag" {
+    for_each = var.use_tags ? [1] : []
+    
+    content {
+      type  = "STRINGEQUALS"
+      key   = var.daily_backup_tag_key
+      value = var.daily_backup_tag_value
+    }
+  }
+
+  dynamic "selection_tag" {
+    for_each = var.use_tags ? var.backup_resource_tags : {}
+    
+    content {
+      type  = "STRINGEQUALS"
+      key   = selection_tag.key
+      value = selection_tag.value
+    }
+  }
+
+  resources = var.use_tags ? null : var.backup_resource_types
+
+  # Ensure at least one selection method is provided
+  lifecycle {
+    precondition {
+      condition     = (var.use_tags && (length(keys(var.backup_resource_tags)) > 0 || (var.daily_backup_tag_key != "" && var.daily_backup_tag_value != ""))) || (!var.use_tags && length(var.backup_resource_types) > 0)
+      error_message = <<-EOT
+        When use_tags is true, either backup_resource_tags must be non-empty or daily_backup_tag_key and daily_backup_tag_value must be set.
+        When use_tags is false, backup_resource_types must be non-empty.
+      EOT
+    }
   }
 }
