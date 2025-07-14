@@ -59,7 +59,7 @@ resource "aws_backup_selection" "daily" {
 
   dynamic "selection_tag" {
     for_each = var.use_tags ? [1] : []
-    
+
     content {
       type  = "STRINGEQUALS"
       key   = var.daily_backup_tag_key
@@ -69,7 +69,7 @@ resource "aws_backup_selection" "daily" {
 
   dynamic "selection_tag" {
     for_each = var.use_tags ? var.backup_resource_tags : {}
-    
+
     content {
       type  = "STRINGEQUALS"
       key   = selection_tag.key
