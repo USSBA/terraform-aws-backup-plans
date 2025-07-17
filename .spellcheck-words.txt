@@ -1,10 +1,12 @@
 affirmer
 ARN
+ARNs
 AutoBackups
 AWSBackupServiceRolePolicyForS
 AWSBackupServiceRolePolicyForS3Restore
 AWSBackupServiceRolePolicyForRestores
 BugFix
+CloudWatch
 config
 cron
 DocumentDB
@@ -12,6 +14,7 @@ EBS
 EFS
 HANA
 HQVulnerabilityManagement
+IAM
 lifecycle
 SNS
 taggable

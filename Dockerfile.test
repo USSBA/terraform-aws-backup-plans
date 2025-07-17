@@ -1,0 +1,54 @@
+FROM alpine:3.18
+
+# Install dependencies
+RUN apk add --no-cache \
+    bash \
+    curl \
+    git \
+    jq \
+    make \
+    python3 \
+    py3-pip \
+    docker-cli \
+    docker-compose \
+    && pip3 install --no-cache-dir awscli-local awscli
+
+# Install Terraform 1.12.0
+RUN wget https://releases.hashicorp.com/terraform/1.12.0/terraform_1.12.0_linux_amd64.zip \
+    && unzip terraform_1.12.0_linux_amd64.zip \
+    && mv terraform /usr/local/bin/ \
+    && rm terraform_1.12.0_linux_amd64.zip
+
+# Install Act
+RUN curl -sL https://raw.githubusercontent.com/nektos/act/master/install.sh | bash /dev/stdin -b /usr/local/bin
+
+# Install TFLint
+RUN curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+
+# Install Terraform docs
+RUN curl -sLo /tmp/terraform-docs.tar.gz https://terraform-docs.io/dl/v0.16.0/terraform-docs-v0.16.0-linux-amd64.tar.gz \
+    && tar -xzf /tmp/terraform-docs.tar.gz \
+    && chmod +x terraform-docs \
+    && mv terraform-docs /usr/local/bin/ \
+    && rm /tmp/terraform-docs.tar.gz
+
+# Install TFSec
+RUN curl -sL https://github.com/aquasecurity/tfsec/releases/download/v1.28.1/tfsec-linux-amd64 -o /usr/local/bin/tfsec \
+    && chmod +x /usr/local/bin/tfsec
+
+# Install Checkov
+RUN pip3 install --no-cache-dir checkov
+
+# Configure AWS CLI for LocalStack
+RUN mkdir -p ~/.aws
+RUN echo '[default]\nregion = us-east-1\noutput = json\n' > ~/.aws/config
+RUN echo '[default]\naws_access_key_id = test\naws_secret_access_key = test\n' > ~/.aws/credentials
+
+WORKDIR /workspace
+
+# Copy entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["terraform", "--version"]
