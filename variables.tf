@@ -1,3 +1,10 @@
+# Region Configuration
+variable "region" {
+  type        = string
+  description = "The AWS region where resources will be created. Defaults to us-east-1."
+  default     = "us-east-1"
+}
+
 # Backup Configuration
 variable "enabled" {
   type        = bool

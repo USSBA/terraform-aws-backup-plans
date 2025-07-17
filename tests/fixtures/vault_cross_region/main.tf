@@ -1,16 +1,54 @@
-# Main provider for the primary region
+# Mock provider for testing
 provider "aws" {
-  region = "us-west-2"
+  region     = var.region
+  access_key = "mock_access_key"
+  secret_key = "mock_secret_key"
+  skip_credentials_validation = true
+  skip_metadata_api_check     = true
+  skip_requesting_account_id  = true
+  s3_use_path_style          = true
+  
+  # Use mock endpoints for local testing
+  endpoints {
+    sts = "http://localhost:45678"  # Mock endpoint for local testing
+  }
 }
 
-# Provider for the cross-region destination
+# Mock cross-region provider
 provider "aws" {
   alias  = "cross_region"  # Using underscore instead of hyphen to avoid issues
-  region = "us-east-1"
+  region = var.cross_region_destination
+  access_key = "mock_access_key"
+  secret_key = "mock_secret_key"
+  skip_credentials_validation = true
+  skip_metadata_api_check     = true
+  skip_requesting_account_id  = true
+  s3_use_path_style          = true
+  
+  # Use mock endpoints for local testing
+  endpoints {
+    sts = "http://localhost:45678"  # Mock endpoint for local testing
+  }
+}
+
+# Define variables used in this fixture
+variable "region" {
+  type    = string
+  default = "us-west-2"
+}
+
+variable "cross_region_destination" {
+  type    = string
+  default = "us-east-1"
 }
 
 module "backup" {
-  source = "../../../"
+  source = "../../.."
+  
+  providers = {
+    aws             = aws  # Default provider
+    aws.cross_region = aws.cross_region
+  }
   
   enabled                    = true
   vault_name                 = "cross-region-vault"
@@ -33,10 +71,7 @@ module "backup" {
   sns_topic_arn            = ""
   backup_resource_types     = []  # Using tags for selection
   
-  # Required for cross-region
-  providers = {
-    aws = aws.cross_region   # Match the alias with underscore
-  }
+  # Cross-region configuration
 }
 
 output "vault_name" {
@@ -45,14 +80,6 @@ output "vault_name" {
 
 output "backup_schedule" {
   value = module.backup.backup_schedule
-}
-
-output "cross_region_backup_enabled" {
-  value = module.backup.cross_region_backup_enabled
-}
-
-output "cross_region_destination" {
-  value = module.backup.cross_region_destination
 }
 
 output "iam_role_arn" {

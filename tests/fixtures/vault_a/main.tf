@@ -1,9 +1,53 @@
+# Mock provider for testing
 provider "aws" {
-  region = "us-west-2"
+  region     = var.region
+  access_key = "mock_access_key"
+  secret_key = "mock_secret_key"
+  skip_credentials_validation = true
+  skip_metadata_api_check     = true
+  skip_requesting_account_id  = true
+  s3_use_path_style          = true
+  
+  # Use mock endpoints for local testing
+  endpoints {
+    sts = "http://localhost:45678"  # Mock endpoint for local testing
+  }
+}
+
+# Mock cross-region provider
+provider "aws" {
+  alias  = "cross_region"
+  region = var.cross_region_destination
+  access_key = "mock_access_key"
+  secret_key = "mock_secret_key"
+  skip_credentials_validation = true
+  skip_metadata_api_check     = true
+  skip_requesting_account_id  = true
+  s3_use_path_style          = true
+  
+  # Use mock endpoints for local testing
+  endpoints {
+    sts = "http://localhost:45678"  # Mock endpoint for local testing
+  }
+}
+
+# Define variables used in this fixture
+variable "region" {
+  type    = string
+  default = "us-west-2"
+}
+
+variable "cross_region_destination" {
+  type    = string
+  default = "us-east-1"
 }
 
 module "backup" {
-  source = "../../../"
+  source = "../../.."
+  
+  providers = {
+    aws.cross_region = aws.cross_region
+  }
   
   enabled                    = true
   vault_name                 = "rds-vault"
