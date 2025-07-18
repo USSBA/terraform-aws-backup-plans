@@ -1,4 +1,8 @@
 name: 'Integration Tests'
+
+env:
+  TERRAFORM_VERSION: 1.12.0
+
 on:
   push:
     branches:
@@ -21,11 +25,13 @@ jobs:
       # Checkout the code
       - name: 'checkout'
         uses: 'actions/checkout@v3'
-      # Install Terraform
+      # Install Terraform with proper permissions
       - name: 'Install Terraform'
-        uses: 'hashicorp/setup-terraform@v2'
-        with:
-          terraform_version: '1.9.5'
+        run: |
+          wget https://releases.hashicorp.com/terraform/${{ env.TERRAFORM_VERSION }}/terraform_${{ env.TERRAFORM_VERSION }}_linux_amd64.zip
+          unzip terraform_${{ env.TERRAFORM_VERSION }}_linux_amd64.zip
+          chmod +x terraform
+          sudo mv terraform /usr/local/bin/
       # Check the Terraform formatting
       - name: 'check formatting'
         run: |
@@ -36,16 +42,20 @@ jobs:
       # Checkout the code
       - name: 'checkout'
         uses: 'actions/checkout@v3'
-      # Install Terraform
-      - name: 'Install Terraform 1.9.5'
-        uses: 'hashicorp/setup-terraform@v2'
-        with:
-          terraform_version: '1.9.5'
+      # Install Terraform with proper permissions
+      - name: 'Install Terraform'
+        run: |
+          wget https://releases.hashicorp.com/terraform/${{ env.TERRAFORM_VERSION }}/terraform_${{ env.TERRAFORM_VERSION }}_linux_amd64.zip
+          unzip terraform_${{ env.TERRAFORM_VERSION }}_linux_amd64.zip
+          chmod +x terraform
+          sudo mv terraform /usr/local/bin/
       # Validate the module can compile
       - name: 'validate module'
         run: |
+          cd tests
           terraform init
-          terraform validate
+          terraform validate          
+          
   spellcheck:
     runs-on: 'ubuntu-latest'
     steps:
@@ -59,3 +69,24 @@ jobs:
         with:
           source_files: 'CHANGELOG.md CONTRIBUTING.md LICENSE.md README.md'
           task_name: 'Markdown'
+
+  test:
+    name: 'Run Terraform Tests'
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Checkout code'
+        uses: 'actions/checkout@v3'
+      
+      - name: 'Install Terraform'
+        run: |
+          wget https://releases.hashicorp.com/terraform/${{ env.TERRAFORM_VERSION }}/terraform_${{ env.TERRAFORM_VERSION }}_linux_amd64.zip
+          unzip terraform_${{ env.TERRAFORM_VERSION }}_linux_amd64.zip
+          chmod +x terraform
+          sudo mv terraform /usr/local/bin/
+      
+      - name: 'Run Terraform Tests'
+        working-directory: './tests'
+        run: |
+          cd tests
+          terraform init
+          terraform test

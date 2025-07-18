@@ -4,16 +4,38 @@ services:
     image: localstack/localstack:latest
     ports:
       - "4566:4566"            # LocalStack Gateway
+      - "8080:8080"            # LocalStack Web UI
       - "4510-4559:4510-4559"  # External services port range
     environment:
-      - SERVICES=backup,iam,sts,cloudwatch,events,secretsmanager
+      # Enable only the services we need
+      - SERVICES=s3,dynamodb,iam,sts,cloudwatch,events,secretsmanager,backup
       - DEBUG=1
       - DATA_DIR=/tmp/localstack/data
       - DOCKER_HOST=unix:///var/run/docker.sock
       - DEFAULT_REGION=us-east-1
+      - LOCALSTACK_HOST=localstack
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_DEFAULT_OUTPUT=json
+      
+      # Disable problematic features
+      - IGNORE_NON_RETRYABLE_ERROR=1
+      - SKIP_SSL_CERT_DOWNLOAD=1
+      - SKIP_SSL_CERT_GENERATE=1
+      
     volumes:
       - "${PWD}/.localstack:/var/lib/localstack"
       - "/var/run/docker.sock:/var/run/docker.sock"
+      - "${PWD}/.localstack/init/:/etc/localstack/init/ready.d/"
+      
+    # More lenient health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 45s
 
   test-runner:
     build:
@@ -21,6 +43,7 @@ services:
       dockerfile: Dockerfile.test
     volumes:
       - .:/workspace
+      - /var/run/docker.sock:/var/run/docker.sock
     working_dir: /workspace
     environment:
       - AWS_ACCESS_KEY_ID=test
@@ -28,7 +51,10 @@ services:
       - AWS_DEFAULT_REGION=us-east-1
       - LOCALSTACK_HOST=localstack
       - AWS_ENDPOINT=http://localstack:4566
+      - TF_LOG=DEBUG
     depends_on:
-      - localstack
-    entrypoint: ["/bin/sh", "-c"]
-    command: ["while true; do sleep 1000; done"]  # Keep container running
+      localstack:
+        condition: service_healthy
+    # Remove the entrypoint and command to use the one from the Dockerfile
+    # This allows the container to start normally and keep running
+    tty: true  # Keep container running
