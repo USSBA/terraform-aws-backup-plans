@@ -13,7 +13,7 @@ provider "aws" {
 # Configure the AWS Provider for cross-region backups
 provider "aws" {
   alias  = "cross_region"
-  region = "us-west-2"  # Default cross-region destination
+  region = "us-west-2" # Default cross-region destination
   # Add other provider configuration as needed (profile, assume role, etc.)
 }
 
@@ -59,8 +59,8 @@ module "production_backup" {
 
   # Provider configuration
   providers = {
-    aws            = aws  # Primary provider for resources
-    aws.cross_region = aws.cross_region  # Cross-region provider (required by the module)
+    aws              = aws              # Primary provider for resources
+    aws.cross_region = aws.cross_region # Cross-region provider (required by the module)
   }
 
   # Tags for resources
@@ -109,8 +109,8 @@ module "database_backup" {
 
   # Provider configuration
   providers = {
-    aws            = aws  # Primary provider for resources
-    aws.cross_region = aws.cross_region  # Cross-region provider (required by the module)
+    aws              = aws              # Primary provider for resources
+    aws.cross_region = aws.cross_region # Cross-region provider (required by the module)
   }
 
   # Tags for resources
@@ -160,8 +160,8 @@ module "disaster_recovery" {
 
   # Provider configuration
   providers = {
-    aws            = aws           # Primary provider for resources
-    aws.cross_region = aws.cross_region  # Cross-region provider for DR
+    aws              = aws              # Primary provider for resources
+    aws.cross_region = aws.cross_region # Cross-region provider for DR
   }
 
   # Tags for resources
