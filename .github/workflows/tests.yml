@@ -87,6 +87,5 @@ jobs:
       - name: 'Run Terraform Tests'
         working-directory: './tests'
         run: |
-          cd tests
           terraform init
           terraform test
