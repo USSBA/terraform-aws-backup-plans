@@ -60,13 +60,13 @@ resource "aws_backup_selection" "daily" {
   # Include resources by ARN patterns if specified
   resources = var.resource_arns
 
-  # Always select by Environment=production tag
+  # Always select by Environment=prod tag
   dynamic "selection_tag" {
     for_each = [1]
     content {
       type  = "STRINGEQUALS"
       key   = "Environment"
-      value = "production"
+      value = "prod"
     }
   }
 
