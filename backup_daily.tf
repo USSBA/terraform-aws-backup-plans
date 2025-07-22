@@ -57,8 +57,14 @@ resource "aws_backup_selection" "daily" {
   name         = var.vault_name
   plan_id      = aws_backup_plan.daily[0].id
 
+  # Include resources by ARN patterns if specified
+  resources = length(var.resource_arns) > 0 ? var.resource_arns : (
+    var.use_tags ? null : var.backup_resource_types
+  )
+
+  # Include default tag if use_tags is true and daily_backup_tag_key/value are set
   dynamic "selection_tag" {
-    for_each = var.use_tags ? [1] : []
+    for_each = var.use_tags && var.daily_backup_tag_key != "" && var.daily_backup_tag_value != "" ? [1] : []
 
     content {
       type  = "STRINGEQUALS"
@@ -67,6 +73,7 @@ resource "aws_backup_selection" "daily" {
     }
   }
 
+  # Include additional tags if use_tags is true
   dynamic "selection_tag" {
     for_each = var.use_tags ? var.backup_resource_tags : {}
 
@@ -77,15 +84,35 @@ resource "aws_backup_selection" "daily" {
     }
   }
 
-  resources = var.use_tags ? null : var.backup_resource_types
+  # Add exclusion conditions if any are specified
+  dynamic "condition" {
+    for_each = var.exclude_conditions
 
-  # Ensure at least one selection method is provided
+    content {
+      string_equals {
+        key   = condition.value.key
+        value = condition.value.value
+      }
+    }
+  }
+
+  # Ensure at least one valid selection method is provided
   lifecycle {
     precondition {
-      condition     = (var.use_tags && (length(keys(var.backup_resource_tags)) > 0 || (var.daily_backup_tag_key != "" && var.daily_backup_tag_value != ""))) || (!var.use_tags && length(var.backup_resource_types) > 0)
+      condition = (
+        # If using ARN patterns, that's sufficient
+        length(var.resource_arns) > 0 ||
+        # Or if using tags, must have either default tag or additional tags
+        (var.use_tags && (length(keys(var.backup_resource_tags)) > 0 ||
+        (var.daily_backup_tag_key != "" && var.daily_backup_tag_value != ""))) ||
+        # Or if not using tags, must have resource types
+        (!var.use_tags && length(var.backup_resource_types) > 0)
+      )
       error_message = <<-EOT
-        When use_tags is true, either backup_resource_tags must be non-empty or daily_backup_tag_key and daily_backup_tag_value must be set.
-        When use_tags is false, backup_resource_types must be non-empty.
+        At least one of the following must be specified:
+        - resource_arns (for ARN patterns)
+        - use_tags = true with backup_resource_tags or daily_backup_tag_key/value
+        - use_tags = false with backup_resource_types
       EOT
     }
   }

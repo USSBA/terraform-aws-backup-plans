@@ -88,23 +88,38 @@ variable "sns_topic_arn" {
   default     = ""
 }
 
-# Backup Resource Types
+# Resource Selection
 variable "backup_resource_types" {
   type        = list(string)
-  description = "List of resource types to back up (e.g., 'AWS::EC2::Volume', 'AWS::RDS::DBInstance'). Used when use_tags is false."
+  description = "List of resource types to back up (e.g., 'AWS::EC2::Volume', 'AWS::RDS::DBInstance'). Used when use_tags is false and resource_arns is empty."
   default     = []
 }
 
 variable "use_tags" {
   type        = bool
-  description = "Whether to use tag-based selection for backup resources. If false, uses explicit resource types instead."
+  description = "Whether to use tag-based selection for backup resources. If false, uses explicit resource types or ARNs instead."
   default     = true
 }
 
 variable "backup_resource_tags" {
   type        = map(any)
-  description = "Optional; Key-value map of tags for selecting resources to back up. Used when use_tags is true."
+  description = "Key-value map of tags for selecting resources to back up. Used when use_tags is true."
   default     = {}
+}
+
+variable "resource_arns" {
+  type        = list(string)
+  description = "List of resource ARNs or ARN patterns to include in the backup selection. Can be used with or without tag-based selection."
+  default     = []
+}
+
+variable "exclude_conditions" {
+  type = list(object({
+    key   = string # e.g., "aws:ResourceTag/Environment" or "aws:ResourceTag/Backup"
+    value = string # The value to match against the key for exclusion
+  }))
+  description = "List of key-value pairs to exclude resources from backup. Uses string_equals condition to match resources that should be excluded."
+  default     = []
 }
 
 # Tags
