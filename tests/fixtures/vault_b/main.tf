@@ -54,7 +54,7 @@ module "backup" {
   backup_schedule = "cron(0 6 * * ? *)"
 
   service_role_name = "backup-service-role-s3"
-  resource_arns    = ["arn:aws:s3:::dummy-bucket-b"]
+  resource_arns     = ["arn:aws:s3:::dummy-bucket-b"]
   additional_managed_policies = [
     "arn:aws:iam::123456789012:policy/ExtraPolicy"
   ]

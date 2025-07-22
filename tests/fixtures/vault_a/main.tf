@@ -49,12 +49,12 @@ module "backup" {
     aws.cross_region = aws.cross_region
   }
 
-  enabled                     = true
-  vault_name                  = "rds-vault"
-  backup_schedule             = "cron(0 5 * * ? *)"
+  enabled         = true
+  vault_name      = "rds-vault"
+  backup_schedule = "cron(0 5 * * ? *)"
 
   service_role_name           = "backup-service-role-rds"
-  resource_arns              = ["arn:aws:rds:us-west-2:123456789012:db:dummy-a"]
+  resource_arns               = ["arn:aws:rds:us-west-2:123456789012:db:dummy-a"]
   cross_region_backup_enabled = false
   daily_backup_enabled        = true
 

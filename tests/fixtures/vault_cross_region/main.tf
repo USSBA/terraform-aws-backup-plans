@@ -55,7 +55,7 @@ module "backup" {
   backup_schedule = "cron(0 7 * * ? *)"
 
   service_role_name = "backup-service-role-cross-region"
-  resource_arns    = ["arn:aws:rds:us-west-2:123456789012:db:dummy-crossregion"]
+  resource_arns     = ["arn:aws:rds:us-west-2:123456789012:db:dummy-crossregion"]
 
   # Enable cross-region backups
   cross_region_backup_enabled = true
