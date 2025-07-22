@@ -19,28 +19,31 @@ To use this module, ensure you have the following:
 
 ## Inputs
 
-| Name                         | Description                                                                                            | Type        | Default         | Required  |
-|------------------------------|--------------------------------------------------------------------------------------------------------|-------------|-----------------|-----------|
-| `enabled`                    | Enable/disable creation of all resources in this module.                                               | `bool`      | `true`          | ❌ No     |
-| `start_window_minutes`       | Amount of time (in minutes) **before** starting a backup job.                                          | `number`    | `60`            | ❌ No     |
-| `completion_window_minutes`  | Amount of time (in minutes) a backup job can run **before** it is automatically canceled.              | `number`    | `180`           | ❌ No     |
-| `opt_in_settings`            | Region-specific opt-in choices for AWS Backup (Use `aws backup describe-region-settings` for options). | `map(any)`  | `{}`            | ❌ No     |
-| `cross_region_backup_enabled`| Enable/disable cross-region backup **copies**.                                                         | `bool`      | `false`         | ❌ No     |
-| `cross_region_destination`   | The region to send cross-region backup copies to.                                                      | `string`    | `"us-west-2"`   | ❌ No     |
-| `daily_backup_enabled`       | Enable/disable daily backups.                                                                          | `bool`      | `true`          | ❌ No     |
-| `daily_backup_tag_key`       | Tag **key** used to select resources for daily backup.                                                 | `string`    | `"BackupDaily"` | ❌ No     |
-| `daily_backup_tag_value`     | Tag **value** used to select resources for daily backup.                                               | `string`    | `"true"`        | ❌ No     |
-| `sns_topic_arn`              | Optional SNS topic ARN to receive backup vault notifications.                                          | `string`    | `""`            | ❌ No     |
-| `tags`                       | Key/value map of tags to apply to **all** resources.                                                   | `map(any)`  | `{}`            | ❌ No     |
-| `tags_vault`                 | Key/value map of tags to apply to backup **vaults**.                                                   | `map(any)`  | `{}`            | ❌ No     |
-| `tags_plan`                  | Key/value map of tags to apply to backup **plans**.                                                    | `map(any)`  | `{}`            | ❌ No     |
-| `additional_managed_policies` | List of up to 18 additional IAM policy ARNs to attach to the backup service role. | `list(string)` | `[]` | ❌ No |
-| `vault_name` | Name of the backup vault. | `string` | `"backup-vault"` | ❌ No |
-| `service_role_name` | Name of the IAM role to be created for AWS Backup. If not specified, a name will be generated using the format 'backup-service-role-{vault_name}'. | `string` | `""` | ❌ No |
-| `backup_schedule` | Cron expression defining the backup schedule. | `string` | `"cron(0 5 * * ? *)"` | ❌ No |
-| `use_tags` | Whether to use tag-based selection for backup resources. If false, uses explicit resource types instead. | `bool` | `true` | ❌ No |
-| `backup_resource_types` | List of resource types to back up when `use_tags` is false. | `list(string)` | `[]` | ❌ No |
-| `exclude_conditions` | List of key-value pairs to exclude resources from backup. Uses string_equals condition. | `list(object({key=string, value=string}))` | `[]` | ❌ No |
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| `region` | The AWS region where resources will be created. | `string` | `"us-east-1"` | ❌ No |
+| `enabled` | Enable/disable creation of all resources in this module. | `bool` | `true` | ❌ No |
+| `service_role_name` | Name of the IAM role for AWS Backup. If empty, defaults to 'backup-service-role-{vault_name}'. | `string` | `""` | ❌ No |
+| `start_window_minutes` | Time window (minutes) before starting a backup job. | `number` | `60` | ❌ No |
+| `completion_window_minutes` | Maximum time (minutes) a backup job can run before being canceled. | `number` | `180` | ❌ No |
+| `opt_in_settings` | Region-specific AWS Backup settings. Use `aws backup describe-region-settings` for options. | `map(any)` | `{}` | ❌ No |
+| `cross_region_backup_enabled` | Enable/disable cross-region backup copies. | `bool` | `false` | ❌ No |
+| `cross_region_destination` | Destination region for cross-region backups. | `string` | `"us-west-2"` | ❌ No |
+| `daily_backup_enabled` | Enable/disable daily backups. | `bool` | `true` | ❌ No |
+| `daily_backup_tag_key` | Tag key for daily backup selection. | `string` | `"BackupDaily"` | ❌ No |
+| `daily_backup_tag_value` | Tag value for daily backup selection. | `string` | `"true"` | ❌ No |
+| `vault_name` | Name of the backup vault. | `string` | `"DefaultBackupVault"` | ❌ No |
+| `backup_schedule` | Cron expression for backup schedule. | `string` | `"cron(0 5 * * ? *)"` (5 AM UTC) | ❌ No |
+| `sns_topic_arn` | SNS topic ARN for backup vault notifications. | `string` | `""` | ❌ No |
+| `backup_resource_types` | Resource types to back up (e.g., 'AWS::EC2::Volume', 'AWS::RDS::DBInstance'). Used when `use_tags` is false and `resource_arns` is empty. | `list(string)` | `[]` | ❌ No |
+| `use_tags` | Use tag-based selection for backup resources. If false, uses `backup_resource_types` or `resource_arns`. | `bool` | `true` | ❌ No |
+| `backup_resource_tags` | Tag key-value pairs for selecting resources when `use_tags` is true. | `map(any)` | `{}` | ❌ No |
+| `resource_arns` | List of resource ARNs or patterns to include in backup selection. Can be used with or without tags. | `list(string)` | `[]` | ❌ No |
+| `exclude_conditions` | Resources matching these conditions will be excluded from backups. Each condition requires `key` (e.g., 'aws:ResourceTag/Environment') and `value` fields. | `list(object({key=string, value=string}))` | `[]` | ❌ No |
+| `tags` | Tags to apply to all resources. | `map(any)` | `{}` | ❌ No |
+| `tags_vault` | Tags specific to backup vaults. | `map(any)` | `{}` | ❌ No |
+| `tags_plan` | Tags specific to backup plans. | `map(any)` | `{}` | ❌ No |
+| `additional_managed_policies` | Additional IAM policy ARNs (max 18) to attach to the backup service role. Combined with required AWS Backup policies (max 20 total). | `list(string)` | `[]` | ❌ No |
 
 ## Vault Naming Convention
 
