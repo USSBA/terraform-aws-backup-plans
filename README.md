@@ -42,6 +42,90 @@ To use this module, ensure you have the following:
 | `backup_resource_types` | List of resource types to back up when `use_tags` is false. | `list(string)` | `[]` | ❌ No |
 | `exclude_conditions` | List of key-value pairs to exclude resources from backup. Uses string_equals condition. | `list(object({key=string, value=string}))` | `[]` | ❌ No |
 
+## Vault Naming Convention
+
+### Name Format
+
+- Use hyphens (`-`) as word separators in vault names (e.g., `production-backup-vault`)
+- Avoid using underscores (`_`) as they are being deprecated in favor of hyphens
+- Vault names must be between 1 and 50 characters long
+- Must be unique within an AWS Region for your AWS account
+
+### Migrating from Underscores to Hyphens
+
+When renaming a vault from using underscores to hyphens, follow these steps to ensure a smooth transition without data loss:
+
+1. **Create the New Vault**
+   
+   - Update your Terraform configuration with the new vault name using hyphens
+   - Run `terraform plan` to verify the changes
+   - Apply the changes with `terraform apply` to create the new vault
+
+2. **Copy Backups to the New Vault**
+
+   Use the AWS CLI to copy recovery points from the old vault to the new one:
+
+   ```bash
+   # List recovery points in the old vault
+   OLD_VAULT="old_vault_name"
+   NEW_VAULT="new-vault-name"
+   
+   # Get list of recovery points
+   RECOVERY_POINTS=$(aws backup list-recovery-points-by-backup-vault \
+     --backup-vault-name $OLD_VAULT \
+     --query 'RecoveryPoints[].RecoveryPointArn' \
+     --output text)
+   
+   # Copy each recovery point to the new vault
+   for RP_ARN in $RECOVERY_POINTS; do
+     BACKUP_JOB_ID=$(aws backup start-copy-job \
+       --recovery-point-arn $RP_ARN \
+       --source-backup-vault-name $OLD_VAULT \
+       --destination-backup-vault-arn arn:aws:backup:REGION:ACCOUNT_ID:backup-vault:$NEW_VAULT \
+       --iam-role-arn arn:aws:iam::ACCOUNT_ID:role/service-role/AWSBackupDefaultServiceRole \
+       --query 'CopyJobId' \
+       --output text)
+     echo "Started copy job $BACKUP_JOB_ID for $RP_ARN"
+   done
+   ```
+
+3. **Verify the Copy Operations**
+
+   ```bash
+   # Check status of copy jobs
+   aws backup describe-copy-job --copy-job-id YOUR_COPY_JOB_ID
+   
+   # List recovery points in the new vault to verify
+   aws backup list-recovery-points-by-backup-vault --backup-vault-name $NEW_VAULT
+   ```
+
+4. **Update References**
+
+   - Update any IAM policies, backup plans, or other resources that reference the old vault name
+   - Update any monitoring or alerting systems
+
+5. **Retire the Old Vault (Optional)**
+
+   - After verifying all backups are successfully copied and accessible in the new vault
+   - Consider removing the old vault if it's no longer needed
+   - You may want to keep it for a transition period to ensure everything works as expected
+
+### Example Vault Names
+
+```hcl
+# Recommended format with hyphens
+module "backup" {
+  source     = "USSBA/backup-plans/aws"
+  vault_name = "production-backup-vault"
+}
+
+# Deprecated format with underscores (avoid)
+module "backup_old" {
+  source     = "USSBA/backup-plans/aws"
+  vault_name = "production_backup_vault"  # Not recommended
+}
+```
+
 ## Exclusion Conditions
 
 You can exclude specific resources from being backed up using the `exclude_conditions` variable. This is useful when you want to back up most resources with a specific tag but exclude certain ones.
