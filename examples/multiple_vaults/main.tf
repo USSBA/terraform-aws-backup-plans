@@ -32,26 +32,26 @@ locals {
     Project     = "Backup Strategy"
     CostCenter  = "IT-123"
   }
-  
+
   # Common backup settings based on environment
   backup_settings = {
     development = {
-      retention_days = 7
+      retention_days    = 7
       cold_storage_days = 0
-      cross_region = false
+      cross_region      = false
     }
     staging = {
-      retention_days = 14
+      retention_days    = 14
       cold_storage_days = 30
-      cross_region = false
+      cross_region      = false
     }
     production = {
-      retention_days = 30
+      retention_days    = 30
       cold_storage_days = 90
-      cross_region = true
+      cross_region      = true
     }
   }
-  
+
   current_settings = local.backup_settings[var.environment]
 }
 
@@ -66,8 +66,8 @@ module "app_data_backup" {
 
   # Backup schedule and settings
   backup_schedule           = "cron(0 2 * * ? *)" # 2 AM UTC (9 PM EST)
-  start_window_minutes      = 120  # 2-hour window to start the backup
-  completion_window_minutes = 360  # 6-hour window to complete the backup
+  start_window_minutes      = 120                 # 2-hour window to start the backup
+  completion_window_minutes = 360                 # 6-hour window to complete the backup
 
   # Tag-based selection for application data
   use_tags               = true
@@ -80,7 +80,7 @@ module "app_data_backup" {
     DataClass   = "application"
     BackupTier  = "standard"
   }
-  
+
   # Exclude resources with specific tags
   exclude_conditions = [
     {
@@ -104,7 +104,7 @@ module "app_data_backup" {
 
   # Enable cross-region backup for production
   cross_region_backup_enabled = local.current_settings.cross_region
-  cross_region_destination   = "us-west-2"
+  cross_region_destination    = "us-west-2"
 
   # Provider configuration
   providers = {
@@ -143,8 +143,8 @@ module "database_backup" {
 
   # Backup schedule during maintenance window
   backup_schedule           = "cron(0 2 * * ? *)" # 2 AM UTC (9 PM EST)
-  start_window_minutes      = 180  # 3-hour window to start the backup
-  completion_window_minutes = 480  # 8-hour window to complete the backup
+  start_window_minutes      = 180                 # 3-hour window to start the backup
+  completion_window_minutes = 480                 # 8-hour window to complete the backup
 
   # Resource type based selection for databases
   use_tags = false
@@ -155,7 +155,7 @@ module "database_backup" {
     "NEPTUNE",
     "ELASTICACHE"
   ]
-  
+
   # Explicitly include specific resources by ARN if needed
   resource_arns = [
     # Example: "arn:aws:rds:us-east-1:123456789012:db:production-db-1"
@@ -173,7 +173,7 @@ module "database_backup" {
 
   # Enable cross-region backup for production
   cross_region_backup_enabled = local.current_settings.cross_region
-  cross_region_destination   = "us-west-2"
+  cross_region_destination    = "us-west-2"
 
   # Provider configuration
   providers = {
@@ -189,7 +189,7 @@ module "database_backup" {
 
   # Vault-specific tags
   tags_vault = {
-    BackupRetention = "${local.current_settings.retention_days * 2}-days"  # Double retention for databases
+    BackupRetention = "${local.current_settings.retention_days * 2}-days" # Double retention for databases
     ColdStorage     = local.current_settings.cold_storage_days > 0 ? "enabled" : "disabled"
     DataSensitivity = "high"
     RTO             = "4h"  # Recovery Time Objective
@@ -201,15 +201,15 @@ module "database_backup" {
     Schedule = "daily"
     Window   = "maintenance"
   }
-  
+
   # Opt-in settings for database services
   opt_in_settings = {
     "ResourcesTypeOptInPreference" = {
-      "Aurora"   = true,
-      "DynamoDB" = true,
-      "RDS"      = true,
+      "Aurora"     = true,
+      "DynamoDB"   = true,
+      "RDS"        = true,
       "DocumentDB" = true,
-      "Neptune"   = true
+      "Neptune"    = true
     }
   }
 }
@@ -220,19 +220,19 @@ module "disaster_recovery" {
   source = "../.."
 
   region     = "us-east-1"
-  enabled    = var.environment == "production"  # Only enable DR for production
+  enabled    = var.environment == "production" # Only enable DR for production
   vault_name = "${var.environment}-dr-vault"
 
   # Backup schedule during off-peak hours
   backup_schedule           = "cron(0 4 * * ? *)" # 4 AM UTC (12 AM EST)
-  start_window_minutes      = 240  # 4-hour window to start the backup
-  completion_window_minutes = 720  # 12-hour window to complete the backup
+  start_window_minutes      = 240                 # 4-hour window to start the backup
+  completion_window_minutes = 720                 # 12-hour window to complete the backup
 
   # Tag-based selection for critical resources only
   use_tags               = true
   daily_backup_tag_key   = "DisasterRecovery"
   daily_backup_tag_value = "required"
-  
+
   # Additional selection criteria
   backup_resource_tags = {
     Environment = var.environment
@@ -241,7 +241,7 @@ module "disaster_recovery" {
 
   # Cross-region backup configuration
   cross_region_backup_enabled = true
-  cross_region_destination   = "us-west-2"  # DR region (different AWS region)
+  cross_region_destination    = "us-west-2" # DR region (different AWS region)
 
   # IAM role configuration with minimal required permissions
   service_role_name = "backup-role-${var.environment}-dr"
@@ -269,8 +269,8 @@ module "disaster_recovery" {
     BackupRetention = "1-year"
     ColdStorage     = "enabled"
     DataSensitivity = "critical"
-    RTO             = "8h"   # Recovery Time Objective
-    RPO             = "24h"  # Recovery Point Objective
+    RTO             = "8h"  # Recovery Time Objective
+    RPO             = "24h" # Recovery Point Objective
     Compliance      = "hipaa,gdpr"
   }
 
@@ -280,7 +280,7 @@ module "disaster_recovery" {
     Purpose  = "disaster-recovery"
     Priority = "high"
   }
-  
+
   # SNS topic for backup notifications
   sns_topic_arn = "arn:aws:sns:us-east-1:123456789012:backup-notifications"
 
@@ -311,14 +311,14 @@ module "s3_backup" {
 
   # Backup schedule during off-peak hours
   backup_schedule           = "cron(0 3 * * ? *)" # 3 AM UTC (10 PM EST)
-  start_window_minutes      = 180  # 3-hour window to start the backup
-  completion_window_minutes = 360  # 6-hour window to complete the backup
+  start_window_minutes      = 180                 # 3-hour window to start the backup
+  completion_window_minutes = 360                 # 6-hour window to complete the backup
 
   # Target S3 buckets with specific tags
   use_tags               = true
   daily_backup_tag_key   = "S3Backup"
   daily_backup_tag_value = "enabled"
-  
+
   # Additional selection criteria
   backup_resource_tags = {
     Environment = var.environment
@@ -333,7 +333,7 @@ module "s3_backup" {
 
   # Enable cross-region backup for production
   cross_region_backup_enabled = local.current_settings.cross_region
-  cross_region_destination   = "us-west-2"
+  cross_region_destination    = "us-west-2"
 
   # Provider configuration
   providers = {
