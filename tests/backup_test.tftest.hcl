@@ -1,6 +1,6 @@
 # Test file for AWS Backup module - Vault B Configuration
 
-# Test Vault B (Tag-based backup, non-cross-region)
+# Test Vault B (ARN-based backup, non-cross-region)
 run "vault_b_configuration" {
   command = plan
 

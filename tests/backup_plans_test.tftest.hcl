@@ -16,10 +16,7 @@ run "vault_a_configuration" {
     error_message = "Vault A schedule should be 'cron(0 5 * * ? *)'"
   }
 
-  assert {
-    condition     = length(module.backup.backup_resource_types) == 1 && module.backup.backup_resource_types[0] == "rds:db"
-    error_message = "Vault A should have exactly one resource type 'rds:db'"
-  }
+
 }
 
 # Test Vault B (Tag-based backup, non-cross-region)

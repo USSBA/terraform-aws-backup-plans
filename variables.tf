@@ -56,18 +56,6 @@ variable "daily_backup_enabled" {
   default     = true
 }
 
-variable "daily_backup_tag_key" {
-  type        = string
-  description = "The resource tag key used to select resources for daily backup (e.g., 'BackupDaily'). Default: 'BackupDaily'."
-  default     = "BackupDaily"
-}
-
-variable "daily_backup_tag_value" {
-  type        = string
-  description = "The resource tag value used to select resources for daily backup (e.g., 'true'). Default: 'true'."
-  default     = "true"
-}
-
 # Vault Settings
 variable "vault_name" {
   type        = string
@@ -89,24 +77,6 @@ variable "sns_topic_arn" {
 }
 
 # Resource Selection
-variable "backup_resource_types" {
-  type        = list(string)
-  description = "List of AWS resource types to include in the backup plan (e.g., 'AWS::EC2::Volume', 'AWS::RDS::DBInstance'). Used only when 'use_tags' is false and 'resource_arns' is empty. Default: empty list."
-  default     = []
-}
-
-variable "use_tags" {
-  type        = bool
-  description = "Whether to select resources for backup based on tags. If true, resources with matching 'backup_resource_tags' will be included. If false, 'backup_resource_types' and/or 'resource_arns' are used. Default: true."
-  default     = true
-}
-
-variable "backup_resource_tags" {
-  type        = map(any)
-  description = "Key-value pairs of tags used to select resources for backup when 'use_tags' is true. Example: { Environment = 'prod' }. Default: empty map."
-  default     = {}
-}
-
 variable "resource_arns" {
   type        = list(string)
   description = "List of resource ARNs or ARN patterns to include in the backup selection. Can be used with or without tag-based selection. Example: ['arn:aws:ec2:region:account-id:volume/*']. Default: empty list."
@@ -121,14 +91,6 @@ variable "exclude_conditions" {
   description = "List of key-value conditions to exclude resources from backup. Each object must have a 'key' (such as 'aws:ResourceTag/Environment') and a 'value'. Only resources matching all conditions will be excluded. Default: empty list."
   default     = []
 }
-
-# Tagging
-variable "tags" {
-  type        = map(any)
-  description = "Key-value map of tags to apply to all resources created by this module. Default: empty map."
-  default     = {}
-}
-
 variable "tags_vault" {
   type        = map(any)
   description = "Key-value map of tags to apply specifically to backup vaults. Default: empty map."

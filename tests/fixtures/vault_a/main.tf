@@ -52,9 +52,9 @@ module "backup" {
   enabled                     = true
   vault_name                  = "rds-vault"
   backup_schedule             = "cron(0 5 * * ? *)"
-  use_tags                    = false
-  backup_resource_types       = ["rds:db"]
+
   service_role_name           = "backup-service-role-rds"
+  resource_arns              = ["arn:aws:rds:us-west-2:123456789012:db:dummy-a"]
   cross_region_backup_enabled = false
   daily_backup_enabled        = true
 
@@ -63,7 +63,7 @@ module "backup" {
   completion_window_minutes = 180
   opt_in_settings           = {}
   sns_topic_arn             = ""
-  backup_resource_tags      = {}
+
 }
 
 output "vault_name" {
@@ -72,10 +72,6 @@ output "vault_name" {
 
 output "backup_schedule" {
   value = module.backup.backup_schedule
-}
-
-output "backup_resource_types" {
-  value = module.backup.backup_resource_types
 }
 
 output "iam_role_arn" {

@@ -1,5 +1,5 @@
 # Test Vault C (Cross-region backup)
-run "vault_cross_region_configuration" {
+run "cross_region_configuration" {
   command = plan
 
   module {

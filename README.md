@@ -30,14 +30,14 @@ To use this module, ensure you have the following:
 | `cross_region_backup_enabled` | Enable/disable cross-region backup copies. | `bool` | `false` | ❌ No |
 | `cross_region_destination` | Destination region for cross-region backups. | `string` | `"us-west-2"` | ❌ No |
 | `daily_backup_enabled` | Enable/disable daily backups. | `bool` | `true` | ❌ No |
-| `daily_backup_tag_key` | Tag key for daily backup selection. | `string` | `"BackupDaily"` | ❌ No |
-| `daily_backup_tag_value` | Tag value for daily backup selection. | `string` | `"true"` | ❌ No |
+| `` | Tag key for daily backup selection. | `string` | `"BackupDaily"` | ❌ No |
+| `` | Tag value for daily backup selection. | `string` | `"true"` | ❌ No |
 | `vault_name` | Name of the backup vault. | `string` | `"DefaultBackupVault"` | ❌ No |
 | `backup_schedule` | Cron expression for backup schedule. | `string` | `"cron(0 5 * * ? *)"` (5 AM UTC) | ❌ No |
 | `sns_topic_arn` | SNS topic ARN for backup vault notifications. | `string` | `""` | ❌ No |
-| `backup_resource_types` | Resource types to back up (e.g., 'AWS::EC2::Volume', 'AWS::RDS::DBInstance'). Used when `use_tags` is false and `resource_arns` is empty. | `list(string)` | `[]` | ❌ No |
-| `use_tags` | Use tag-based selection for backup resources. If false, uses `backup_resource_types` or `resource_arns`. | `bool` | `true` | ❌ No |
-| `backup_resource_tags` | Tag key-value pairs for selecting resources when `use_tags` is true. | `map(any)` | `{}` | ❌ No |
+| `(selection now only by resource_arns and Environment=production tag)` | Resource types to back up (e.g., 'AWS::EC2::Volume', 'AWS::RDS::DBInstance'). Used when `` is false and `resource_arns` is empty. | `list(string)` | `[]` | ❌ No |
+| `` | Use tag-based selection for backup resources. If false, uses `(selection now only by resource_arns and Environment=production tag)` or `resource_arns`. | `bool` | `true` | ❌ No |
+| `backup_resource_tags` | Tag key-value pairs for selecting resources when `` is true. | `map(any)` | `{}` | ❌ No |
 | `resource_arns` | List of resource ARNs or patterns to include in backup selection. Can be used with or without tags. | `list(string)` | `[]` | ❌ No |
 | `exclude_conditions` | Resources matching these conditions will be excluded from backups. Each condition requires `key` (e.g., 'aws:ResourceTag/Environment') and `value` fields. | `list(object({key=string, value=string}))` | `[]` | ❌ No |
 | `tags` | Tags to apply to all resources. | `map(any)` | `{}` | ❌ No |
@@ -227,7 +227,7 @@ You can attach up to 18 additional managed policies using the `additional_manage
 3. Regularly review and audit IAM policies for least privilege access
 
 #### Resource Selection
-1. Use tag-based resource selection (`use_tags = true`) for dynamic environments
+1. Use tag-based resource selection (` = true`) for dynamic environments
 2. For static environments, consider using explicit resource ARNs for better control
 3. Use the `exclude_conditions` variable to filter out resources that shouldn't be backed up
 4. When backing up S3 buckets, ensure versioning is enabled for point-in-time recovery
@@ -265,8 +265,8 @@ module "rds-backup" {
   vault_name = "rds-backup-vault"
   
   # Target only RDS databases
-  use_tags = false
-  backup_resource_types = ["AWS::RDS::DBInstance"]
+   = false
+  (selection now only by resource_arns and Environment=production tag) = ["AWS::RDS::DBInstance"]
   
   # Add RDS-specific policies
   additional_managed_policies = [
@@ -284,7 +284,7 @@ module "s3-backup" {
   vault_name = "s3-backup-vault"
   
   # Target specific S3 buckets by tag
-  use_tags = true
+   = true
   backup_resource_tags = {
     BackupS3 = "true"
   }
@@ -307,7 +307,7 @@ module "custom-backup" {
   backup_schedule = "cron(0 2 * * ? *)"
   
   # Resource selection
-  use_tags = true
+   = true
   backup_resource_tags = {
     Environment = "production"
     Backup      = "enabled"
@@ -358,8 +358,8 @@ module "tag-based-backup" {
   source  = "USSBA/backup-plans/aws"
   version = "~> 7.0"
   
-  daily_backup_tag_key   = "BackupPolicy"
-  daily_backup_tag_value = "daily"
+     = "BackupPolicy"
+   = "daily"
 }
 ```
 
@@ -371,8 +371,8 @@ module "type-based-backup" {
   source  = "USSBA/backup-plans/aws"
   version = "~> 7.0"
   
-  use_tags = false
-  backup_resource_types = [
+   = false
+  (selection now only by resource_arns and Environment=production tag) = [
     "AWS::RDS::DBInstance",
     "AWS::DynamoDB::Table",
     "AWS::EFS::FileSystem"
@@ -389,7 +389,7 @@ module "advanced-backup" {
   version = "~> 7.0"
   
   # Use tags for dynamic resources
-  use_tags = true
+   = true
   backup_resource_tags = {
     Backup = "enabled"
   }
@@ -492,8 +492,8 @@ module "backup-with-custom-policies" {
 3. Ensure the IAM role has permissions to create resources in the destination region
 
   # Change the daily backup tag key-value to `AutoBackups = very-yes` for triggering
-  daily_backup_tag_key   = "AutoBackups"
-  daily_backup_tag_value = "very-yes"
+     = "AutoBackups"
+   = "very-yes"
 }
 ```
 

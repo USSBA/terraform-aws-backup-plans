@@ -15,7 +15,7 @@ resource "aws_iam_role" "service_role" {
 
   # Add tags to the role for better resource management
   tags = merge(
-    var.tags,
+    var.tags_vault,
     {
       Name = var.service_role_name != "" ? var.service_role_name : "backup-service-role-${var.vault_name}"
     }
