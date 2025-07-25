@@ -1,13 +1,18 @@
 # terraform-aws-backup-plans
 
-This module implements a daily backup plan with a 30-day warm storage retention period and a 90-day cold (Glacier) storage retention period.
+This module implements an opinionated AWS Backup solution that automatically discovers and backs up all resources tagged with `Environment=prod`. It provides a "catch-all" approach where developers can easily backup resources without understanding AWS service specifics, while still allowing configuration overrides when needed.
 
 ## Features
 
-- Configures the AWS Backup service to run daily backups
-- Daily backups are retained in warm storage for 30 days and then transferred to cold storage for 90 additional days
-- Out of the box will this module will look for a tag key-value of `BackupDaily: true` to initiate a backup
-- Grants necessary service role permissions
+- **Auto-Discovery** - Automatically finds and backs up all resources tagged with `Environment=prod`
+- **Opinionated Defaults** - Sensible configurations that "just work" out of the box
+- **Override Support** - Specify exact resources via `resource_arns` when needed
+- **Daily Backup Plans** - Configurable scheduling with cron expressions
+- **Cross-Region Backup** - Optional backup replication to different AWS regions
+- **IAM Role Management** - Automatic service role creation with necessary permissions
+- **SNS Notifications** - Optional backup job status notifications
+- **Flexible Retention** - 30-day warm storage + 90-day cold storage (configurable)
+- **Exclude Conditions** - Fine-grained resource exclusion capabilities
 
 ## Prerequisites
 
@@ -30,20 +35,90 @@ To use this module, ensure you have the following:
 | `cross_region_backup_enabled` | Enable/disable cross-region backup copies. | `bool` | `false` | ❌ No |
 | `cross_region_destination` | Destination region for cross-region backups. | `string` | `"us-west-2"` | ❌ No |
 | `daily_backup_enabled` | Enable/disable daily backups. | `bool` | `true` | ❌ No |
-| `` | Tag key for daily backup selection. | `string` | `"BackupDaily"` | ❌ No |
-| `` | Tag value for daily backup selection. | `string` | `"true"` | ❌ No |
 | `vault_name` | Name of the backup vault. | `string` | `"DefaultBackupVault"` | ❌ No |
 | `backup_schedule` | Cron expression for backup schedule. | `string` | `"cron(0 5 * * ? *)"` (5 AM UTC) | ❌ No |
 | `sns_topic_arn` | SNS topic ARN for backup vault notifications. | `string` | `""` | ❌ No |
-| `(selection now only by resource_arns and Environment=production tag)` | Resource types to back up (e.g., 'AWS::EC2::Volume', 'AWS::RDS::DBInstance'). Used when `` is false and `resource_arns` is empty. | `list(string)` | `[]` | ❌ No |
-| `` | Use tag-based selection for backup resources. If false, uses `(selection now only by resource_arns and Environment=production tag)` or `resource_arns`. | `bool` | `true` | ❌ No |
-| `backup_resource_tags` | Tag key-value pairs for selecting resources when `` is true. | `map(any)` | `{}` | ❌ No |
-| `resource_arns` | List of resource ARNs or patterns to include in backup selection. Can be used with or without tags. | `list(string)` | `[]` | ❌ No |
+| `resource_arns` | Optional list of specific resource ARNs or ARN patterns to include in backup selection. If empty, the module will automatically discover all resources with Environment=prod tag. | `list(string)` | `[]` | ❌ No |
 | `exclude_conditions` | Resources matching these conditions will be excluded from backups. Each condition requires `key` (e.g., 'aws:ResourceTag/Environment') and `value` fields. | `list(object({key=string, value=string}))` | `[]` | ❌ No |
-| `tags` | Tags to apply to all resources. | `map(any)` | `{}` | ❌ No |
 | `tags_vault` | Tags specific to backup vaults. | `map(any)` | `{}` | ❌ No |
 | `tags_plan` | Tags specific to backup plans. | `map(any)` | `{}` | ❌ No |
 | `additional_managed_policies` | Additional IAM policy ARNs (max 18) to attach to the backup service role. Combined with required AWS Backup policies (max 20 total). | `list(string)` | `[]` | ❌ No |
+
+## Usage
+
+### Opinionated (Recommended) - Auto-Discovery
+
+The simplest way to use this module is to let it automatically discover all your production resources:
+
+```hcl
+provider "aws" {
+  region = "us-east-1"
+}
+
+provider "aws" {
+  alias  = "cross_region"
+  region = "us-west-2"
+}
+
+# Minimal configuration - backs up ALL resources tagged Environment=prod
+module "production_backup" {
+  source = "path/to/terraform-aws-backup-plans"
+
+  vault_name = "production-backup-vault"
+
+  # Provider configuration (required)
+  providers = {
+    aws              = aws
+    aws.cross_region = aws.cross_region
+  }
+
+  tags_vault = {
+    Environment = "production"
+    ManagedBy   = "terraform"
+  }
+}
+```
+
+### Override Mode - Specific Resources
+
+When you need fine-grained control over which resources to backup:
+
+```hcl
+module "database_backup" {
+  source = "path/to/terraform-aws-backup-plans"
+
+  vault_name      = "database-backup-vault"
+  backup_schedule = "cron(0 2 * * ? *)"  # 2 AM UTC daily
+
+  # Override auto-discovery with specific resources
+  resource_arns = [
+    "arn:aws:rds:us-east-1:*:db:critical-*",
+    "arn:aws:dynamodb:us-east-1:*:table/critical-*"
+  ]
+
+  # Optional: Cross-region backup
+  cross_region_backup_enabled = true
+  cross_region_destination    = "us-west-2"
+
+  # Provider configuration (required)
+  providers = {
+    aws              = aws
+    aws.cross_region = aws.cross_region
+  }
+
+  tags_vault = {
+    Environment = "production"
+    DataClass   = "critical"
+  }
+}
+```
+
+### Important Notes
+
+- **Auto-Discovery**: By default, the module automatically discovers all resources tagged with `Environment=prod`
+- **Override**: When `resource_arns` is specified, only those resources are backed up (plus Environment=prod tag filter)
+- **Tag Requirements**: Resources must be tagged with `Environment=prod` to be included in backups
+- **Provider Configuration**: Cross-region provider is required even if cross-region backup is disabled
 
 ## Vault Naming Convention
 

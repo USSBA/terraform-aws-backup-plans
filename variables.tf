@@ -79,7 +79,7 @@ variable "sns_topic_arn" {
 # Resource Selection
 variable "resource_arns" {
   type        = list(string)
-  description = "List of resource ARNs or ARN patterns to include in the backup selection. Can be used with or without tag-based selection. Example: ['arn:aws:ec2:region:account-id:volume/*']. Default: empty list."
+  description = "Optional list of specific resource ARNs or ARN patterns to include in backup selection. If empty, the module will automatically discover all resources with Environment=prod tag. Example: ['arn:aws:ec2:region:account-id:volume/*']. Default: empty list (auto-discovery)."
   default     = []
 }
 

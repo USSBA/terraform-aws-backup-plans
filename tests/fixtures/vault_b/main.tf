@@ -10,7 +10,9 @@ provider "aws" {
 
   # Use mock endpoints for local testing
   endpoints {
-    sts = "http://localhost:45678" # Mock endpoint for local testing
+    sts    = "http://localhost:45678"
+    iam    = "http://localhost:45678"
+    backup = "http://localhost:45678"
   }
 }
 
@@ -27,7 +29,9 @@ provider "aws" {
 
   # Use mock endpoints for local testing
   endpoints {
-    sts = "http://localhost:45678" # Mock endpoint for local testing
+    sts    = "http://localhost:45678"
+    iam    = "http://localhost:45678"
+    backup = "http://localhost:45678"
   }
 }
 

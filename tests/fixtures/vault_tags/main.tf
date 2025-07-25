@@ -18,7 +18,7 @@ provider "aws" {
 
 # Mock cross-region provider
 provider "aws" {
-  alias                       = "cross_region" # Using underscore instead of hyphen to avoid issues
+  alias                       = "cross_region"
   region                      = var.cross_region_destination
   access_key                  = "mock_access_key"
   secret_key                  = "mock_secret_key"
@@ -27,7 +27,6 @@ provider "aws" {
   skip_requesting_account_id  = true
   s3_use_path_style           = true
 
-  # Use mock endpoints for local testing
   endpoints {
     sts    = "http://localhost:45678"
     iam    = "http://localhost:45678"
@@ -35,7 +34,6 @@ provider "aws" {
   }
 }
 
-# Define variables used in this fixture
 variable "region" {
   type    = string
   default = "us-west-2"
@@ -50,29 +48,33 @@ module "backup" {
   source = "../../.."
 
   providers = {
-    aws              = aws # Default provider
     aws.cross_region = aws.cross_region
   }
 
   enabled         = true
-  vault_name      = "cross-region-vault"
-  backup_schedule = "cron(0 7 * * ? *)"
+  vault_name      = "tag-based-vault"
+  backup_schedule = "cron(0 3 * * ? *)"
 
-  service_role_name = "backup-service-role-cross-region"
-  resource_arns     = ["arn:aws:rds:us-west-2:123456789012:db:dummy-crossregion"]
+  service_role_name = "backup-service-role-tags"
 
-  # Enable cross-region backups
-  cross_region_backup_enabled = true
-  cross_region_destination    = "us-east-1"
+  # Test auto-discovery mode (resource_arns is optional - will auto-discover Environment=prod resources)
+  # Note: Module automatically selects resources with Environment=prod tag
+
+  # Exclude certain resources
+  exclude_conditions = [
+    {
+      key   = "aws:ResourceTag/BackupExclude"
+      value = "true"
+    }
+  ]
+
+  cross_region_backup_enabled = false
   daily_backup_enabled        = true
 
-  # Explicitly set all required variables
   start_window_minutes      = 60
   completion_window_minutes = 180
   opt_in_settings           = {}
   sns_topic_arn             = ""
-
-  # Cross-region configuration
 }
 
 output "vault_name" {

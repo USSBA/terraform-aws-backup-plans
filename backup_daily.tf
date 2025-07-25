@@ -57,8 +57,8 @@ resource "aws_backup_selection" "daily" {
   name         = var.vault_name
   plan_id      = aws_backup_plan.daily[0].id
 
-  # Include resources by ARN patterns if specified
-  resources = var.resource_arns
+  # Include specific resources if ARNs provided, otherwise auto-discover via tags
+  resources = length(var.resource_arns) > 0 ? var.resource_arns : null
 
   # Always select by Environment=prod tag
   dynamic "selection_tag" {
@@ -82,15 +82,6 @@ resource "aws_backup_selection" "daily" {
     }
   }
 
-  # Ensure at least one valid selection method is provided
-  lifecycle {
-    precondition {
-      condition = (
-        length(var.resource_arns) > 0
-      )
-      error_message = <<-EOT
-        At least one resource ARN must be specified in resource_arns.
-      EOT
-    }
-  }
+  # Auto-discovery: When no resource ARNs are specified, 
+  # backup selection relies on the Environment=prod tag filter to discover resources
 }

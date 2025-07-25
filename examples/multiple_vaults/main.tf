@@ -69,29 +69,22 @@ module "app_data_backup" {
   start_window_minutes      = 120                 # 2-hour window to start the backup
   completion_window_minutes = 360                 # 6-hour window to complete the backup
 
-  # Tag-based selection for application data
-  use_tags               = true
-  daily_backup_tag_key   = "BackupPolicy"
-  daily_backup_tag_value = "daily"
-
-  # Additional resource tags for more specific selection
-  backup_resource_tags = {
-    Environment = var.environment
-    DataClass   = "application"
-    BackupTier  = "standard"
-  }
+  # Resource selection via ARNs (module hardcodes Environment=prod tag)
+  resource_arns = [
+    "arn:aws:ec2:us-east-1:*:volume/*",
+    "arn:aws:rds:us-east-1:*:db:*",
+    "arn:aws:s3:::app-data-*/*"
+  ]
 
   # Exclude resources with specific tags
   exclude_conditions = [
     {
-      condition_type = "STRINGEQUALS"
-      key            = "aws:ResourceTag/BackupExclude"
-      value          = "true"
+      key   = "aws:ResourceTag/BackupExclude"
+      value = "true"
     },
     {
-      condition_type = "STRINGLIKE"
-      key            = "aws:ResourceTag/Name"
-      value          = "*test*"
+      key   = "aws:ResourceTag/Name"
+      value = "*test*"
     }
   ]
 
@@ -112,23 +105,19 @@ module "app_data_backup" {
     aws.cross_region = aws.cross_region
   }
 
-  # Tags for resources
-  tags = merge(local.common_tags, {
-    Component = "backup"
-    Name      = "${var.environment}-app-data-backup"
-  })
-
-  # Vault-specific tags
-  tags_vault = {
+  # Tags for backup resources
+  tags_vault = merge(local.common_tags, {
+    Component       = "backup"
+    Name            = "${var.environment}-app-data-backup"
     BackupRetention = "${local.current_settings.retention_days}-days"
     ColdStorage     = local.current_settings.cold_storage_days > 0 ? "enabled" : "disabled"
     DataSensitivity = "medium"
-  }
+  })
 
-  # Plan-specific tags
   tags_plan = {
-    Schedule = "daily"
-    Window   = "overnight"
+    Component = "backup"
+    Schedule  = "daily"
+    Window    = "overnight"
   }
 }
 
@@ -146,19 +135,11 @@ module "database_backup" {
   start_window_minutes      = 180                 # 3-hour window to start the backup
   completion_window_minutes = 480                 # 8-hour window to complete the backup
 
-  # Resource type based selection for databases
-  use_tags = false
-  backup_resource_types = [
-    "RDS",
-    "DYNAMODB",
-    "DOCDB",
-    "NEPTUNE",
-    "ELASTICACHE"
-  ]
-
-  # Explicitly include specific resources by ARN if needed
+  # Database resource selection via ARNs
   resource_arns = [
-    # Example: "arn:aws:rds:us-east-1:123456789012:db:production-db-1"
+    "arn:aws:rds:us-east-1:*:db:production-*",
+    "arn:aws:dynamodb:us-east-1:*:table/production-*",
+    "arn:aws:docdb:us-east-1:*:cluster:production-*"
   ]
 
   # IAM role configuration with database-specific permissions
@@ -181,36 +162,30 @@ module "database_backup" {
     aws.cross_region = aws.cross_region
   }
 
-  # Tags for resources
-  tags = merge(local.common_tags, {
-    Component = "database-backup"
-    Name      = "${var.environment}-database-backup"
-  })
-
-  # Vault-specific tags
-  tags_vault = {
+  # Tags for backup resources
+  tags_vault = merge(local.common_tags, {
+    Component       = "database-backup"
+    Name            = "${var.environment}-database-backup"
     BackupRetention = "${local.current_settings.retention_days * 2}-days" # Double retention for databases
     ColdStorage     = local.current_settings.cold_storage_days > 0 ? "enabled" : "disabled"
     DataSensitivity = "high"
     RTO             = "4h"  # Recovery Time Objective
     RPO             = "24h" # Recovery Point Objective
-  }
+  })
 
-  # Plan-specific tags
   tags_plan = {
-    Schedule = "daily"
-    Window   = "maintenance"
+    Component = "database-backup"
+    Schedule  = "daily"
+    Window    = "maintenance"
   }
 
   # Opt-in settings for database services
   opt_in_settings = {
-    "ResourcesTypeOptInPreference" = {
-      "Aurora"     = true,
-      "DynamoDB"   = true,
-      "RDS"        = true,
-      "DocumentDB" = true,
-      "Neptune"    = true
-    }
+    "Aurora"     = true
+    "DynamoDB"   = true
+    "RDS"        = true
+    "DocumentDB" = true
+    "Neptune"    = true
   }
 }
 
@@ -228,16 +203,12 @@ module "disaster_recovery" {
   start_window_minutes      = 240                 # 4-hour window to start the backup
   completion_window_minutes = 720                 # 12-hour window to complete the backup
 
-  # Tag-based selection for critical resources only
-  use_tags               = true
-  daily_backup_tag_key   = "DisasterRecovery"
-  daily_backup_tag_value = "required"
-
-  # Additional selection criteria
-  backup_resource_tags = {
-    Environment = var.environment
-    DataClass   = "critical"
-  }
+  # Critical resource selection for DR
+  resource_arns = [
+    "arn:aws:rds:us-east-1:*:db:critical-*",
+    "arn:aws:dynamodb:us-east-1:*:table/critical-*",
+    "arn:aws:ec2:us-east-1:*:volume/vol-critical-*"
+  ]
 
   # Cross-region backup configuration
   cross_region_backup_enabled = true
@@ -258,21 +229,17 @@ module "disaster_recovery" {
     aws.cross_region = aws.cross_region
   }
 
-  # Tags for resources
-  tags = merge(local.common_tags, {
-    Component = "disaster-recovery"
-    Name      = "${var.environment}-dr-backup"
-  })
-
   # Vault-specific tags with extended retention for DR
-  tags_vault = {
+  tags_vault = merge(local.common_tags, {
+    Component       = "disaster-recovery"
+    Name            = "${var.environment}-dr-backup"
     BackupRetention = "1-year"
     ColdStorage     = "enabled"
     DataSensitivity = "critical"
     RTO             = "8h"  # Recovery Time Objective
     RPO             = "24h" # Recovery Point Objective
     Compliance      = "hipaa,gdpr"
-  }
+  })
 
   # Plan-specific tags
   tags_plan = {
@@ -286,17 +253,15 @@ module "disaster_recovery" {
 
   # Opt-in settings for DR resources
   opt_in_settings = {
-    "ResourcesTypeOptInPreference" = {
-      "Aurora"          = true,
-      "DynamoDB"        = true,
-      "EBS"             = true,
-      "EC2"             = true,
-      "EFS"             = true,
-      "FSx"             = true,
-      "RDS"             = true,
-      "Storage Gateway" = true,
-      "VirtualMachine"  = true
-    }
+    "Aurora"          = true
+    "DynamoDB"        = true
+    "EBS"             = true
+    "EC2"             = true
+    "EFS"             = true
+    "FSx"             = true
+    "RDS"             = true
+    "Storage Gateway" = true
+    "VirtualMachine"  = true
   }
 }
 
@@ -314,16 +279,11 @@ module "s3_backup" {
   start_window_minutes      = 180                 # 3-hour window to start the backup
   completion_window_minutes = 360                 # 6-hour window to complete the backup
 
-  # Target S3 buckets with specific tags
-  use_tags               = true
-  daily_backup_tag_key   = "S3Backup"
-  daily_backup_tag_value = "enabled"
-
-  # Additional selection criteria
-  backup_resource_tags = {
-    Environment = var.environment
-    DataClass   = "s3"
-  }
+  # S3 bucket selection via ARNs
+  resource_arns = [
+    "arn:aws:s3:::${var.environment}-app-data-*/*",
+    "arn:aws:s3:::${var.environment}-user-uploads-*/*"
+  ]
 
   # IAM role configuration with S3 permissions
   service_role_name = "backup-role-${var.environment}-s3"
@@ -341,18 +301,14 @@ module "s3_backup" {
     aws.cross_region = aws.cross_region
   }
 
-  # Tags for resources
-  tags = merge(local.common_tags, {
-    Component = "s3-backup"
-    Name      = "${var.environment}-s3-backup"
-  })
-
   # Vault-specific tags
-  tags_vault = {
+  tags_vault = merge(local.common_tags, {
+    Component       = "s3-backup"
+    Name            = "${var.environment}-s3-backup"
     BackupRetention = "${local.current_settings.retention_days}-days"
     ColdStorage     = local.current_settings.cold_storage_days > 0 ? "enabled" : "disabled"
     DataSensitivity = "medium"
-  }
+  })
 
   # Plan-specific tags
   tags_plan = {

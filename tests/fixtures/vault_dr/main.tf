@@ -8,7 +8,6 @@ provider "aws" {
   skip_requesting_account_id  = true
   s3_use_path_style           = true
 
-  # Use mock endpoints for local testing
   endpoints {
     sts    = "http://localhost:45678"
     iam    = "http://localhost:45678"
@@ -16,9 +15,9 @@ provider "aws" {
   }
 }
 
-# Mock cross-region provider
+# Mock cross-region provider for DR
 provider "aws" {
-  alias                       = "cross_region" # Using underscore instead of hyphen to avoid issues
+  alias                       = "cross_region"
   region                      = var.cross_region_destination
   access_key                  = "mock_access_key"
   secret_key                  = "mock_secret_key"
@@ -27,7 +26,6 @@ provider "aws" {
   skip_requesting_account_id  = true
   s3_use_path_style           = true
 
-  # Use mock endpoints for local testing
   endpoints {
     sts    = "http://localhost:45678"
     iam    = "http://localhost:45678"
@@ -35,44 +33,72 @@ provider "aws" {
   }
 }
 
-# Define variables used in this fixture
 variable "region" {
   type    = string
-  default = "us-west-2"
+  default = "us-east-1"
 }
 
 variable "cross_region_destination" {
   type    = string
-  default = "us-east-1"
+  default = "us-west-2"
 }
 
 module "backup" {
   source = "../../.."
 
   providers = {
-    aws              = aws # Default provider
+    aws              = aws
     aws.cross_region = aws.cross_region
   }
 
   enabled         = true
-  vault_name      = "cross-region-vault"
-  backup_schedule = "cron(0 7 * * ? *)"
+  vault_name      = "disaster-recovery-vault"
+  backup_schedule = "cron(0 4 * * ? *)"
 
-  service_role_name = "backup-service-role-cross-region"
-  resource_arns     = ["arn:aws:rds:us-west-2:123456789012:db:dummy-crossregion"]
+  service_role_name = "backup-service-role-dr"
 
-  # Enable cross-region backups
+  # Use ARN-based selection for critical DR resources
+  resource_arns = [
+    "arn:aws:rds:us-east-1:123456789012:db:critical-prod-db",
+    "arn:aws:dynamodb:us-east-1:123456789012:table/critical-prod-table",
+    "arn:aws:ec2:us-east-1:123456789012:volume/vol-*"
+  ]
+
+  # Note: Module hardcodes Environment=prod tag selection
+
+  # Enable cross-region backup for DR
   cross_region_backup_enabled = true
-  cross_region_destination    = "us-east-1"
+  cross_region_destination    = var.cross_region_destination
   daily_backup_enabled        = true
 
-  # Explicitly set all required variables
-  start_window_minutes      = 60
-  completion_window_minutes = 180
-  opt_in_settings           = {}
-  sns_topic_arn             = ""
+  # Extended backup windows for DR
+  start_window_minutes      = 240 # 4 hour start window
+  completion_window_minutes = 720 # 12 hour completion window
 
-  # Cross-region configuration
+  # DR-specific opt-in settings
+  opt_in_settings = {
+    "Aurora"   = true
+    "DynamoDB" = true
+    "EBS"      = true
+    "EC2"      = true
+    "EFS"      = true
+    "RDS"      = true
+  }
+
+  # SNS notifications for DR backups
+  sns_topic_arn = "arn:aws:sns:us-east-1:123456789012:backup-dr-notifications"
+
+  # Tags for DR resources
+  tags_vault = {
+    Purpose     = "disaster-recovery"
+    Environment = "production"
+    Compliance  = "required"
+  }
+
+  tags_plan = {
+    Purpose  = "disaster-recovery"
+    Priority = "critical"
+  }
 }
 
 output "vault_name" {
