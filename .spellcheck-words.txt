@@ -21,6 +21,7 @@ CMKs
 config
 CopyJobId
 cron
+DataClass
 disclaimer
 DBInstance
 DocumentDB
