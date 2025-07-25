@@ -19,6 +19,10 @@ services:
       - AWS_DEFAULT_REGION=us-east-1
       - AWS_DEFAULT_OUTPUT=json
       
+      # Enable mock implementation for Backup service
+      - MOCK_SERVICES=backup
+      - MOCK_BACKUP_IMPLEMENTATION=mock
+      
       # Disable problematic features
       - IGNORE_NON_RETRYABLE_ERROR=1
       - SKIP_SSL_CERT_DOWNLOAD=1
@@ -37,6 +41,18 @@ services:
       retries: 5
       start_period: 45s
 
+  mock-backup:
+    image: python:3.12-slim
+    container_name: mock-backup
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./tests:/app
+    working_dir: /app
+    command: python -u mock_backup.py
+    depends_on:
+      - localstack
+
   test-runner:
     build:
       context: .
@@ -48,6 +64,8 @@ services:
     environment:
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - MOCK_BACKUP_ENDPOINT=http://mock-backup:5000
       - AWS_DEFAULT_REGION=us-east-1
       - LOCALSTACK_HOST=localstack
       - AWS_ENDPOINT=http://localstack:4566

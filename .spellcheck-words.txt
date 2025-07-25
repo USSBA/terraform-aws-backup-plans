@@ -34,6 +34,7 @@ HQVulnerabilityManagement
 IAM
 KMS
 lifecycle
+ManagedBy
 RecoveryPointArn
 RecoveryPoints
 ResourceTag
