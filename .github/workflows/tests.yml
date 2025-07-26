@@ -88,68 +88,16 @@ jobs:
       - name: 'Checkout code'
         uses: actions/checkout@v3
         
-      - name: 'Set up Python'
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
-          
-      - name: 'Install dependencies'
+      - name: 'Start services with Docker Compose'
+        working-directory: ./tests
         run: |
-          python -m pip install --upgrade pip
-          pip install boto3
-          
-      - name: 'Start LocalStack'
-        run: |
-          docker run -d --name localstack \
-            -p 4566:4566 \
-            -p 8080:8080 \
-            -e SERVICES=s3,dynamodb,iam,sts,cloudwatch,events,secretsmanager \
-            -e DEBUG=1 \
-            -e PERSISTENCE=/tmp/localstack/data \
-            -e REGION=us-east-1 \
-            -e AWS_ACCESS_KEY_ID=test \
-            -e AWS_SECRET_ACCESS_KEY=test \
-            -e AWS_DEFAULT_REGION=us-east-1 \
-            -e IGNORE_NON_RETRYABLE_ERROR=1 \
-            -e SKIP_SSL_CERT_DOWNLOAD=1 \
-            -e SKIP_SSL_CERT_GENERATE=1 \
-            localstack/localstack:latest
-            
-      - name: 'Start mock Backup service'
-        run: |
-          cd tests
-          python mock_backup.py &
-          echo "$!" > mock_server.pid
+          docker compose up -d
           
       - name: 'Wait for services to be ready'
+        working-directory: ./tests
         run: |
-          # Wait for LocalStack (with timeout)
-          echo "Waiting for LocalStack..."
-          timeout=120
-          counter=0
-          until curl -s http://localhost:4566/health | grep -q "running" || [ $counter -eq $timeout ]; do
-            sleep 1
-            counter=$((counter + 1))
-          done
-          if [ $counter -eq $timeout ]; then
-            echo "LocalStack failed to start within $timeout seconds"
-            exit 1
-          fi
-          echo "LocalStack is ready!"
-          
-          # Wait for mock Backup service (with timeout)
-          echo "Waiting for mock Backup service..."
-          timeout=30
-          counter=0
-          until curl -s http://localhost:5000/ | grep -q "BackupVaults" || [ $counter -eq $timeout ]; do
-            sleep 1
-            counter=$((counter + 1))
-          done
-          if [ $counter -eq $timeout ]; then
-            echo "Mock Backup service failed to start within $timeout seconds"
-            exit 1
-          fi
-          echo "Mock Backup service is ready!"
+          echo "Waiting for services to be healthy..."
+          docker compose up --wait
           
       - name: 'Install Terraform'
         run: |
@@ -179,12 +127,7 @@ jobs:
           
       - name: 'Cleanup'
         if: always()
+        working-directory: ./tests
         run: |
-          # Stop mock Backup service
-          if [ -f tests/mock_server.pid ]; then
-            kill $(cat tests/mock_server.pid) || true
-          fi
-          
-          # Stop LocalStack
-          docker stop localstack || true
-          docker rm -f localstack || true
+          # Stop all services
+          docker compose down -v
