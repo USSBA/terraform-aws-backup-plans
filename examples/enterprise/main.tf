@@ -1,6 +1,15 @@
 # Enterprise AWS Backup Example
 # This example demonstrates enterprise-grade backup configuration with multiple backup strategies
 
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
 variable "environment" {
   type        = string
   description = "Environment name"
@@ -109,7 +118,12 @@ module "database_backup" {
     aws.cross_region = aws.dr_region
   }
 
-  tags = merge(local.common_tags, {
+  tags_vault = merge(local.common_tags, {
+    Component = "database-backup"
+    Priority  = "critical"
+  })
+
+  tags_plan = merge(local.common_tags, {
     Component = "database-backup"
     Priority  = "critical"
   })
@@ -147,7 +161,12 @@ module "application_backup" {
     aws.cross_region = aws.dr_region
   }
 
-  tags = merge(local.common_tags, {
+  tags_vault = merge(local.common_tags, {
+    Component = "application-backup"
+    Priority  = "standard"
+  })
+
+  tags_plan = merge(local.common_tags, {
     Component = "application-backup"
     Priority  = "standard"
   })
@@ -197,7 +216,13 @@ module "compliance_backup" {
     aws.cross_region = aws.dr_region
   }
 
-  tags = merge(local.common_tags, {
+  tags_vault = merge(local.common_tags, {
+    Component = "compliance-backup"
+    Priority  = "compliance"
+    Retention = "long-term"
+  })
+
+  tags_plan = merge(local.common_tags, {
     Component = "compliance-backup"
     Priority  = "compliance"
     Retention = "long-term"

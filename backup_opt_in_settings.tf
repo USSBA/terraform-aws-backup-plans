@@ -5,10 +5,10 @@ resource "aws_backup_region_settings" "opt_in" {
 }
 # Cross-region provider is conditionally created when cross_region_backup_enabled is true
 resource "aws_backup_region_settings" "cross_region" {
-  count = local.create_cross_region_resources ? 1 : 0
+  for_each = local.create_cross_region_resources ? { "cross_region" = true } : {}
 
   # Use the cross-region provider alias
-  provider = aws.cross_region # Using underscore to match the alias in the test fixture
+  provider = aws.cross_region
 
   # Configure which resource types are included in backups by default
   resource_type_opt_in_preference = {

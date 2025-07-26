@@ -1,6 +1,15 @@
 # Simple AWS Backup Example
 # This example demonstrates the minimal configuration needed to get started with AWS Backup
 
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
 # Configure the AWS provider
 provider "aws" {
   region = "us-east-1"
@@ -27,7 +36,12 @@ module "production_backup" {
 
   # Optional: customize tags
   tags_vault = {
-    Environment = "production"
+    Environment = "prod"
+    ManagedBy   = "terraform"
+  }
+
+  tags_plan = {
+    Environment = "prod"
     ManagedBy   = "terraform"
   }
 }
@@ -52,7 +66,12 @@ module "database_backup" {
   }
 
   tags_vault = {
-    Environment = "production"
+    Environment = "prod"
+    DataClass   = "critical"
+  }
+
+  tags_plan = {
+    Environment = "prod"
     DataClass   = "critical"
   }
 }

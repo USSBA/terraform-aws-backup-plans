@@ -1,6 +1,15 @@
 # This example demonstrates how to create multiple backup vaults with different configurations
 # to handle various backup scenarios in a production environment.
 
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
 variable "environment" {
   type        = string
   description = "The environment name (e.g., dev, staging, prod)"
@@ -60,7 +69,6 @@ locals {
 module "app_data_backup" {
   source = "../.."
 
-  region     = "us-east-1"
   enabled    = true
   vault_name = "${var.environment}-app-data-backup"
 
@@ -126,7 +134,6 @@ module "app_data_backup" {
 module "database_backup" {
   source = "../.."
 
-  region     = "us-east-1"
   enabled    = true
   vault_name = "${var.environment}-database-backup"
 
@@ -194,7 +201,6 @@ module "database_backup" {
 module "disaster_recovery" {
   source = "../.."
 
-  region     = "us-east-1"
   enabled    = var.environment == "production" # Only enable DR for production
   vault_name = "${var.environment}-dr-vault"
 
@@ -270,7 +276,6 @@ module "disaster_recovery" {
 module "s3_backup" {
   source = "../.."
 
-  region     = "us-east-1"
   enabled    = true
   vault_name = "${var.environment}-s3-backup"
 

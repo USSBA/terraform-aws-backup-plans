@@ -48,6 +48,7 @@ module "backup" {
   source = "../../.."
 
   providers = {
+    aws              = aws
     aws.cross_region = aws.cross_region
   }
 

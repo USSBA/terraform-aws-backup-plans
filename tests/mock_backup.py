@@ -207,18 +207,6 @@ class MockBackupHandler(BaseHTTPRequestHandler):
                 'Type': 'Sender'
             }
         }, status_code=400)
-                        'Type': 'Sender'
-                    }
-                }).encode('utf-8'))
-        else:
-            self._set_headers(404)
-            self.wfile.write(json.dumps({
-                'Error': {
-                    'Code': '404',
-                    'Message': 'Not Found',
-                    'Type': 'Sender'
-                }
-            }).encode('utf-8'))
 
 def run(server_class=HTTPServer, handler_class=MockBackupHandler, port=5000):
     """Run the mock server."""

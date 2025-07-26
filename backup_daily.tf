@@ -11,7 +11,7 @@ resource "aws_backup_vault" "daily" {
 }
 
 resource "aws_backup_vault" "daily_cross_region" {
-  count = local.create_cross_region_resources ? 1 : 0
+  for_each = local.create_cross_region_resources ? { "cross_region" = true } : {}
 
   name     = "${var.vault_name}-cross-region"
   tags     = var.tags_vault
@@ -39,7 +39,7 @@ resource "aws_backup_plan" "daily" {
     dynamic "copy_action" {
       for_each = local.create_cross_region_resources ? ["copy backups to the new region"] : []
       content {
-        destination_vault_arn = aws_backup_vault.daily_cross_region[0].arn
+        destination_vault_arn = aws_backup_vault.daily_cross_region["cross_region"].arn
 
         lifecycle {
           cold_storage_after = 30  # Days until transition to Glacier
