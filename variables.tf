@@ -56,6 +56,33 @@ variable "daily_backup_enabled" {
   default     = true
 }
 
+# Lifecycle Settings
+variable "cold_storage_after_days" {
+  type        = number
+  description = "Number of days before backups are transitioned to cold storage (Amazon S3 Glacier). Must be at least 1 day. Set to null to disable cold storage transition. Default: 30."
+  default     = 30
+
+  validation {
+    condition     = var.cold_storage_after_days == null || var.cold_storage_after_days >= 1
+    error_message = "Cold storage transition must be at least 1 day if enabled."
+  }
+}
+
+variable "delete_after_days" {
+  type        = number
+  description = "Number of days after which backups are permanently deleted. Must be at least 90 days greater than cold_storage_after_days if cold storage is enabled. Set to null for permanent retention. Default: 120."
+  default     = 120
+
+  validation {
+    condition = (
+      var.delete_after_days == null ||
+      var.cold_storage_after_days == null ||
+      var.delete_after_days >= (var.cold_storage_after_days + 90)
+    )
+    error_message = "Delete after days must be at least 90 days greater than cold storage after days."
+  }
+}
+
 # Vault Settings
 variable "vault_name" {
   type        = string

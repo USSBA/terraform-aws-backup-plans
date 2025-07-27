@@ -1,5 +1,7 @@
 # terraform-aws-backup-plans
 
+[![Integration Tests](https://github.com/USSBA/terraform-aws-backup-plans/actions/workflows/tests.yml/badge.svg)](https://github.com/USSBA/terraform-aws-backup-plans/actions/workflows/tests.yml)
+
 This module implements an opinionated AWS Backup solution that automatically discovers and backs up all resources tagged with `Environment=prod`. It provides a "catch-all" approach where developers can easily backup resources without understanding AWS service specifics, while still allowing configuration overrides when needed.
 
 ## Features
@@ -35,6 +37,8 @@ To use this module, ensure you have the following:
 | `cross_region_backup_enabled` | Enable/disable cross-region backup copies. | `bool` | `false` | ❌ No |
 | `cross_region_destination` | Destination region for cross-region backups. | `string` | `"us-west-2"` | ❌ No |
 | `daily_backup_enabled` | Enable/disable daily backups. | `bool` | `true` | ❌ No |
+| `cold_storage_after_days` | Number of days before backups are transitioned to cold storage (Amazon S3 Glacier). Set to `null` to disable cold storage transition. | `number` | `30` | ❌ No |
+| `delete_after_days` | Number of days after which backups are permanently deleted. Must be at least 90 days greater than `cold_storage_after_days`. Set to `null` for permanent retention. | `number` | `120` | ❌ No |
 | `vault_name` | Name of the backup vault. | `string` | `"DefaultBackupVault"` | ❌ No |
 | `backup_schedule` | Cron expression for backup schedule. | `string` | `"cron(0 5 * * ? *)"` (5 AM UTC) | ❌ No |
 | `sns_topic_arn` | SNS topic ARN for backup vault notifications. | `string` | `""` | ❌ No |
@@ -109,6 +113,65 @@ module "database_backup" {
   tags_vault = {
     Environment = "production"
     DataClass   = "critical"
+  }
+}
+```
+
+### Lifecycle Configuration - Storage Tiers
+
+Customize backup retention and storage costs with configurable lifecycle rules:
+
+```hcl
+module "long_term_backup" {
+  source = "path/to/terraform-aws-backup-plans"
+
+  vault_name = "long-term-backup-vault"
+
+  # Custom lifecycle settings for cost optimization
+  cold_storage_after_days = 7    # Move to cold storage after 7 days
+  delete_after_days       = 365  # Delete after 1 year (365 days)
+
+  # Provider configuration (required)
+  providers = {
+    aws              = aws
+    aws.cross_region = aws.cross_region
+  }
+
+  tags_vault = {
+    Environment = "production"
+    Retention   = "long-term"
+  }
+}
+
+# Example: Permanent retention (no deletion)
+module "permanent_backup" {
+  source = "path/to/terraform-aws-backup-plans"
+
+  vault_name = "permanent-backup-vault"
+
+  # Keep in warm storage for 90 days, then cold storage forever
+  cold_storage_after_days = 90
+  delete_after_days       = null  # Never delete
+
+  providers = {
+    aws              = aws
+    aws.cross_region = aws.cross_region
+  }
+}
+
+# Example: Warm storage only (no cold storage)
+module "short_term_backup" {
+  source = "path/to/terraform-aws-backup-plans"
+
+  vault_name = "short-term-backup-vault"
+
+  # Keep in warm storage only, delete after 30 days
+  cold_storage_after_days = null  # No cold storage transition
+  delete_after_days       = 30
+
+  providers = {
+    aws              = aws
+    aws.cross_region = aws.cross_region
   }
 }
 ```

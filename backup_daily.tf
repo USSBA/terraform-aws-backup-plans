@@ -1,7 +1,8 @@
 # Daily Backup Plan
-# - Runs every day @ 08:00 AM UTC
-# - Backups are transitioned to cold storage after 30 days
-# - Backups are then removed after 120 total days (30 in warm storage, 90 in cold storage)
+# - Runs on configurable schedule (default: daily @ 05:00 AM UTC)
+# - Backups can be transitioned to cold storage (configurable, default: 30 days)
+# - Backups can be automatically deleted (configurable, default: 120 days total)
+# - Cross-region copies inherit the same lifecycle settings
 
 resource "aws_backup_vault" "daily" {
   count = local.daily_backup_count
@@ -31,9 +32,12 @@ resource "aws_backup_plan" "daily" {
     start_window      = var.start_window_minutes
     completion_window = var.completion_window_minutes
 
-    lifecycle {
-      cold_storage_after = 30  # Days until transition to Glacier
-      delete_after       = 120 # Days until permanent deletion (Must be 90 days greater than cold_storage_after.)
+    dynamic "lifecycle" {
+      for_each = var.cold_storage_after_days != null || var.delete_after_days != null ? [1] : []
+      content {
+        cold_storage_after = var.cold_storage_after_days
+        delete_after       = var.delete_after_days
+      }
     }
 
     dynamic "copy_action" {
@@ -41,9 +45,12 @@ resource "aws_backup_plan" "daily" {
       content {
         destination_vault_arn = aws_backup_vault.daily_cross_region["cross_region"].arn
 
-        lifecycle {
-          cold_storage_after = 30  # Days until transition to Glacier
-          delete_after       = 120 # Days until permanent deletion (Must be 90 days greater than cold_storage_after.)
+        dynamic "lifecycle" {
+          for_each = var.cold_storage_after_days != null || var.delete_after_days != null ? [1] : []
+          content {
+            cold_storage_after = var.cold_storage_after_days
+            delete_after       = var.delete_after_days
+          }
         }
       }
     }
