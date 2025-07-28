@@ -5,19 +5,6 @@ variable "region" {
   default     = "us-east-1"
 }
 
-# Backup Configuration
-variable "enabled" {
-  type        = bool
-  description = "Whether to enable creation of all resources in this module. Set to false to disable all resource creation. Default: true."
-  default     = true
-}
-
-variable "service_role_name" {
-  type        = string
-  description = "Name of the IAM role to be created for AWS Backup. If not specified, a name will be generated in the format 'backup-service-role-{vault_name}'. Default: empty string (auto-generated)."
-  default     = ""
-}
-
 variable "start_window_minutes" {
   type        = number
   description = "The amount of time (in minutes) before a backup job is allowed to start after being scheduled. Default: 60."
@@ -49,40 +36,6 @@ variable "cross_region_destination" {
   default     = "us-west-2"
 }
 
-# Daily Backup Settings
-variable "daily_backup_enabled" {
-  type        = bool
-  description = "Whether to enable daily backups. If false, daily backup jobs will not be scheduled. Default: true."
-  default     = true
-}
-
-# Lifecycle Settings
-variable "cold_storage_after_days" {
-  type        = number
-  description = "Number of days before backups are transitioned to cold storage (Amazon S3 Glacier). Must be at least 1 day. Set to null to disable cold storage transition. Default: 30."
-  default     = 30
-
-  validation {
-    condition     = var.cold_storage_after_days == null || var.cold_storage_after_days >= 1
-    error_message = "Cold storage transition must be at least 1 day if enabled."
-  }
-}
-
-variable "delete_after_days" {
-  type        = number
-  description = "Number of days after which backups are permanently deleted. Must be at least 90 days greater than cold_storage_after_days if cold storage is enabled. Set to null for permanent retention. Default: 120."
-  default     = 120
-
-  validation {
-    condition = (
-      var.delete_after_days == null ||
-      var.cold_storage_after_days == null ||
-      var.delete_after_days >= (var.cold_storage_after_days + 90)
-    )
-    error_message = "Delete after days must be at least 90 days greater than cold storage after days."
-  }
-}
-
 # Vault Settings
 variable "vault_name" {
   type        = string
@@ -96,38 +49,24 @@ variable "backup_schedule" {
   default     = "cron(0 5 * * ? *)"
 }
 
-# Vault Notifications
-variable "sns_topic_arn" {
-  type        = string
-  description = "ARN of the SNS topic to receive backup vault notifications (e.g., backup job completion, failures). Leave blank to disable notifications. Default: empty string."
-  default     = ""
-}
-
 # Resource Selection
 variable "resource_arns" {
   type        = list(string)
-  description = "Optional list of specific resource ARNs or ARN patterns to include in backup selection. If empty, the module will automatically discover all resources with Environment=prod tag. Example: ['arn:aws:ec2:region:account-id:volume/*']. Default: empty list (auto-discovery)."
-  default     = []
+  description = "Required list of specific resource ARNs or ARN patterns to include in backup selection. Example: ['arn:aws:ec2:region:account-id:volume/*']."
+  validation {
+    condition     = length(var.resource_arns) < 1
+    error_message = "Must provide at least 1 resource ARN: note that wildcard ARN match patterns may be used."
+  }
 }
 
-variable "exclude_conditions" {
-  type = list(object({
-    key   = string # e.g., "aws:ResourceTag/Environment" or "aws:ResourceTag/Backup"
-    value = string # The value to match against the key for exclusion
-  }))
-  description = "List of key-value conditions to exclude resources from backup. Each object must have a 'key' (such as 'aws:ResourceTag/Environment') and a 'value'. Only resources matching all conditions will be excluded. Default: empty list."
-  default     = []
-}
-variable "tags_vault" {
-  type        = map(any)
-  description = "Key-value map of tags to apply specifically to backup vaults. Default: empty map."
-  default     = {}
-}
-
-variable "tags_plan" {
-  type        = map(any)
-  description = "Key-value map of tags to apply specifically to backup plans. Default: empty map."
-  default     = {}
+variable "environment_tag_value" {
+  type        = string
+  description = "Optional: The value of the Environment resource tag used in the aws_backup_selection. Default: 'prod'."
+  default     = "prod"
+  validation {
+    condition     = length(var.environment_tag_value) < 1
+    error_message = "The environment_tag_value must contain at least 1 alphanumberic character."
+  }
 }
 
 # Additional Managed Policies
@@ -140,4 +79,11 @@ variable "additional_managed_policies" {
     condition     = length(var.additional_managed_policies) <= 18
     error_message = "A maximum of 18 additional managed policies can be specified (20 total including required AWS Backup policies)."
   }
+}
+
+# Vault Notifications
+variable "sns_topic_arn" {
+  type        = string
+  description = "ARN of the SNS topic to receive backup vault notifications (e.g., backup job completion, failures). Leave blank to disable notifications. Default: empty string."
+  default     = ""
 }

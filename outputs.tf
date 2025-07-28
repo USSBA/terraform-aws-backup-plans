@@ -1,14 +1,29 @@
-output "vault_name" {
+output "vault_id" {
   description = "The name of the created backup vault"
-  value       = try(aws_backup_vault.daily[0].name, "")
+  value       = aws_backup_vault.daily.id
 }
 
-output "backup_schedule" {
-  description = "The configured backup schedule"
-  value       = try([for rule in aws_backup_plan.daily[0].rule : rule.schedule][0], "")
+output "vault_arn" {
+  description = "The ARN of the created backup vault"
+  value       = aws_backup_vault.daily.arn
 }
 
-output "iam_role_arn" {
-  description = "ARN of the IAM role used for backups"
-  value       = try(aws_iam_role.service_role[0].arn, "")
+output "plan_id" {
+  description = "The name of the created backup plan"
+  value       = aws_backup_plan.daily.arn
+}
+
+output "plan_arn" {
+  description = "The ARN of the created backup pan"
+  value       = aws_backup_plan.daily.arn
+}
+
+output "service_role_name" {
+  description = "The name of the IAM service role"
+  value       = aws_iam_role.service_role.name
+}
+
+output "service_role_arn" {
+  description = "The ARN of the IAM service role"
+  value       = aws_iam_role.service_role.arn
 }
