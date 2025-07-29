@@ -27,7 +27,7 @@ resource "aws_backup_plan" "daily" {
 
   rule {
     rule_name         = "daily"
-    target_vault_name = aws_backup_vault.daily[0].name
+    target_vault_name = try(one(aws_backup_vault.daily[*].name), "")
     schedule          = var.backup_schedule
     start_window      = var.start_window_minutes
     completion_window = var.completion_window_minutes
@@ -60,9 +60,9 @@ resource "aws_backup_plan" "daily" {
 resource "aws_backup_selection" "daily" {
   count = local.daily_backup_count
 
-  iam_role_arn = aws_iam_role.service_role[0].arn
+  iam_role_arn = try(one(aws_iam_role.service_role[*].arn), "")
   name         = var.vault_name
-  plan_id      = aws_backup_plan.daily[0].id
+  plan_id      = try(one(aws_backup_plan.daily[*].id), "")
 
   # Include specific resources if ARNs provided, otherwise auto-discover via tags
   resources = length(var.resource_arns) > 0 ? var.resource_arns : null

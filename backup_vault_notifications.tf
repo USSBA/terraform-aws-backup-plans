@@ -5,7 +5,7 @@
 resource "aws_backup_vault_notifications" "daily" {
   count = var.sns_topic_arn != "" ? local.daily_backup_count : 0
 
-  backup_vault_name = aws_backup_vault.daily[0].name
+  backup_vault_name = try(one(aws_backup_vault.daily[*].name), "")
   sns_topic_arn     = var.sns_topic_arn
   backup_vault_events = [
     "BACKUP_JOB_EXPIRED",

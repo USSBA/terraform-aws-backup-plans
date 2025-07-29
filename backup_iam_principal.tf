@@ -43,7 +43,7 @@ resource "aws_iam_role_policy_attachment" "managed_policies" {
   for_each = local.enabled_count > 0 ? toset(local.all_policies) : toset([])
 
   policy_arn = each.key
-  role       = aws_iam_role.service_role[0].name
+  role       = try(one(aws_iam_role.service_role[*].name), "")
 
   # Ensure the role exists before attaching policies
   depends_on = [aws_iam_role.service_role]
