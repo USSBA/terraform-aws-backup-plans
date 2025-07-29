@@ -2,25 +2,20 @@
 
 [![Integration Tests](https://github.com/USSBA/terraform-aws-backup-plans/actions/workflows/tests.yml/badge.svg)](https://github.com/USSBA/terraform-aws-backup-plans/actions/workflows/tests.yml)
 
-This module implements an opinionated AWS Backup solution that automatically discovers and backs up all resources tagged with `Environment=prod`. It provides a "catch-all" approach where developers can easily backup resources without understanding AWS service specifics, while still allowing configuration overrides when needed.
+This module implements an AWS Backup solution that automatically backs up resources tagged with `Environment=prod` and `Backup=true` for a given set of matching ARN patterns.
 
 ## Features
 
-- **Auto-Discovery** - Automatically finds and backs up all resources tagged with `Environment=prod`
-- **Opinionated Defaults** - Sensible configurations that "just work" out of the box
-- **Override Support** - Specify exact resources via `resource_arns` when needed
-- **Daily Backup Plans** - Configurable scheduling with cron expressions
+- **Backup Plans** - Configurable scheduling with cron expressions
 - **Cross-Region Backup** - Optional backup replication to different AWS regions
-- **IAM Role Management** - Automatic service role creation with necessary permissions
+- **IAM Role Management** - Automatic service role creation with default policy attachments
 - **SNS Notifications** - Optional backup job status notifications
-- **Flexible Retention** - 30-day warm storage + 90-day cold storage (configurable)
-- **Exclude Conditions** - Fine-grained resource exclusion capabilities
 
 ## Prerequisites
 
 To use this module, ensure you have the following:
 
-- **Terraform:** ~> 1.9
+- **Terraform:** ~> 1.12.0
 - **AWS Provider:** ~> 5.0
 - **AWS Account:** Configured with appropriate permissions
 
@@ -29,24 +24,15 @@ To use this module, ensure you have the following:
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | `region` | The AWS region where resources will be created. | `string` | `"us-east-1"` | ❌ No |
-| `enabled` | Enable/disable creation of all resources in this module. | `bool` | `true` | ❌ No |
-| `service_role_name` | Name of the IAM role for AWS Backup. If empty, defaults to 'backup-service-role-{vault_name}'. | `string` | `""` | ❌ No |
 | `start_window_minutes` | Time window (minutes) before starting a backup job. | `number` | `60` | ❌ No |
 | `completion_window_minutes` | Maximum time (minutes) a backup job can run before being canceled. | `number` | `180` | ❌ No |
-| `opt_in_settings` | Region-specific AWS Backup settings. Use `aws backup describe-region-settings` for options. | `map(any)` | `{}` | ❌ No |
 | `cross_region_backup_enabled` | Enable/disable cross-region backup copies. | `bool` | `false` | ❌ No |
 | `cross_region_destination` | Destination region for cross-region backups. | `string` | `"us-west-2"` | ❌ No |
-| `daily_backup_enabled` | Enable/disable daily backups. | `bool` | `true` | ❌ No |
-| `cold_storage_after_days` | Number of days before backups are transitioned to cold storage (Amazon S3 Glacier). Set to `null` to disable cold storage transition. | `number` | `30` | ❌ No |
-| `delete_after_days` | Number of days after which backups are permanently deleted. Must be at least 90 days greater than `cold_storage_after_days`. Set to `null` for permanent retention. | `number` | `120` | ❌ No |
 | `vault_name` | Name of the backup vault. | `string` | `"DefaultBackupVault"` | ❌ No |
 | `backup_schedule` | Cron expression for backup schedule. | `string` | `"cron(0 5 * * ? *)"` (5 AM UTC) | ❌ No |
 | `sns_topic_arn` | SNS topic ARN for backup vault notifications. | `string` | `""` | ❌ No |
 | `resource_arns` | Optional list of specific resource ARNs or ARN patterns to include in backup selection. If empty, the module will automatically discover all resources with Environment=prod tag. | `list(string)` | `[]` | ❌ No |
-| `exclude_conditions` | Resources matching these conditions will be excluded from backups. Each condition requires `key` (e.g., 'aws:ResourceTag/Environment') and `value` fields. | `list(object({key=string, value=string}))` | `[]` | ❌ No |
-| `tags_vault` | Tags specific to backup vaults. | `map(any)` | `{}` | ❌ No |
-| `tags_plan` | Tags specific to backup plans. | `map(any)` | `{}` | ❌ No |
-| `additional_managed_policies` | Additional IAM policy ARNs (max 18) to attach to the backup service role. Combined with required AWS Backup policies (max 20 total). | `list(string)` | `[]` | ❌ No |
+| `additional_managed_policies` | Additional IAM policy ARNs (max 16) to attach to the backup service role. Combined with required AWS Backup policies (max 20 total). | `list(string)` | `[]` | ❌ No |
 
 ## Usage
 
@@ -68,106 +54,11 @@ provider "aws" {
 module "production_backup" {
   source = "path/to/terraform-aws-backup-plans"
 
-  vault_name = "production-backup-vault"
-
-  # Provider configuration (required)
-  providers = {
-    aws              = aws
-    aws.cross_region = aws.cross_region
-  }
-
-  tags_vault = {
-    Environment = "production"
-    ManagedBy   = "terraform"
-  }
-}
-```
-
-### Override Mode - Specific Resources
-
-When you need fine-grained control over which resources to backup:
-
-```hcl
-module "database_backup" {
-  source = "path/to/terraform-aws-backup-plans"
-
-  vault_name      = "database-backup-vault"
-  backup_schedule = "cron(0 2 * * ? *)"  # 2 AM UTC daily
-
-  # Override auto-discovery with specific resources
-  resource_arns = [
-    "arn:aws:rds:us-east-1:*:db:critical-*",
-    "arn:aws:dynamodb:us-east-1:*:table/critical-*"
-  ]
-
-  # Optional: Cross-region backup
+  backup_schedule             =  "cron(0 2 * * ? *)"  # 2 AM UTC daily
+  vault_name                  =  "production-rds-vault"
+  resource_arns               =  ["arn:aws:rds:us-east-1:000000000000:cluster:*"]
   cross_region_backup_enabled = true
   cross_region_destination    = "us-west-2"
-
-  # Provider configuration (required)
-  providers = {
-    aws              = aws
-    aws.cross_region = aws.cross_region
-  }
-
-  tags_vault = {
-    Environment = "production"
-    DataClass   = "critical"
-  }
-}
-```
-
-### Lifecycle Configuration - Storage Tiers
-
-Customize backup retention and storage costs with configurable lifecycle rules:
-
-```hcl
-module "long_term_backup" {
-  source = "path/to/terraform-aws-backup-plans"
-
-  vault_name = "long-term-backup-vault"
-
-  # Custom lifecycle settings for cost optimization
-  cold_storage_after_days = 7    # Move to cold storage after 7 days
-  delete_after_days       = 365  # Delete after 1 year (365 days)
-
-  # Provider configuration (required)
-  providers = {
-    aws              = aws
-    aws.cross_region = aws.cross_region
-  }
-
-  tags_vault = {
-    Environment = "production"
-    Retention   = "long-term"
-  }
-}
-
-# Example: Permanent retention (no deletion)
-module "permanent_backup" {
-  source = "path/to/terraform-aws-backup-plans"
-
-  vault_name = "permanent-backup-vault"
-
-  # Keep in warm storage for 90 days, then cold storage forever
-  cold_storage_after_days = 90
-  delete_after_days       = null  # Never delete
-
-  providers = {
-    aws              = aws
-    aws.cross_region = aws.cross_region
-  }
-}
-
-# Example: Warm storage only (no cold storage)
-module "short_term_backup" {
-  source = "path/to/terraform-aws-backup-plans"
-
-  vault_name = "short-term-backup-vault"
-
-  # Keep in warm storage only, delete after 30 days
-  cold_storage_after_days = null  # No cold storage transition
-  delete_after_days       = 30
 
   providers = {
     aws              = aws
@@ -178,9 +69,7 @@ module "short_term_backup" {
 
 ### Important Notes
 
-- **Auto-Discovery**: By default, the module automatically discovers all resources tagged with `Environment=prod`
-- **Override**: When `resource_arns` is specified, only those resources are backed up (plus Environment=prod tag filter)
-- **Tag Requirements**: Resources must be tagged with `Environment=prod` to be included in backups
+- **Tag Requirements**: Resources must be tagged with `Environment=prod` and `Backup=true` to be included in backups
 - **Provider Configuration**: Cross-region provider is required even if cross-region backup is disabled
 
 ## Vault Naming Convention
@@ -197,7 +86,7 @@ module "short_term_backup" {
 When renaming a vault from using underscores to hyphens, follow these steps to ensure a smooth transition without data loss:
 
 1. **Create the New Vault**
-   
+
    - Update your Terraform configuration with the new vault name using hyphens
    - Run `terraform plan` to verify the changes
    - Apply the changes with `terraform apply` to create the new vault
@@ -210,13 +99,13 @@ When renaming a vault from using underscores to hyphens, follow these steps to e
    # List recovery points in the old vault
    OLD_VAULT="old_vault_name"
    NEW_VAULT="new-vault-name"
-   
+
    # Get list of recovery points
    RECOVERY_POINTS=$(aws backup list-recovery-points-by-backup-vault \
      --backup-vault-name $OLD_VAULT \
      --query 'RecoveryPoints[].RecoveryPointArn' \
      --output text)
-   
+
    # Copy each recovery point to the new vault
    for RP_ARN in $RECOVERY_POINTS; do
      BACKUP_JOB_ID=$(aws backup start-copy-job \
@@ -235,7 +124,7 @@ When renaming a vault from using underscores to hyphens, follow these steps to e
    ```bash
    # Check status of copy jobs
    aws backup describe-copy-job --copy-job-id YOUR_COPY_JOB_ID
-   
+
    # List recovery points in the new vault to verify
    aws backup list-recovery-points-by-backup-vault --backup-vault-name $NEW_VAULT
    ```
@@ -267,39 +156,6 @@ module "backup_old" {
 }
 ```
 
-## Exclusion Conditions
-
-You can exclude specific resources from being backed up using the `exclude_conditions` variable. This is useful when you want to back up most resources with a specific tag but exclude certain ones.
-
-### Example: Excluding Resources
-
-```hcl
-module "backup" {
-  source = "USSBA/backup-plans/aws"
-  
-  # ... other configurations ...
-  
-  # Exclude resources with specific tags
-  exclude_conditions = [
-    {
-      key   = "aws:ResourceTag/Environment"
-      value = "test"
-    },
-    {
-      key   = "aws:ResourceTag/Backup"
-      value = "false"
-    }
-  ]
-}
-```
-
-### Notes on Exclusion Conditions
-
-- Exclusion conditions use exact string matching (`string_equals`).
-- The `key` should be a valid tag key, typically in the format `aws:ResourceTag/<tagname>`.
-- Multiple conditions are combined with AND logic - a resource must match all conditions to be excluded.
-- Exclusion conditions are applied after the initial resource selection (by tags or resource types).
-
 ## Notes
 
 - Cold storage is currently only supported for backups of Amazon EBS, Amazon EFS, Amazon DynamoDB, Amazon Timestream, SAP HANA on EC2, and VMware Backup.
@@ -317,7 +173,7 @@ This module automatically attaches the following AWS managed policies to the bac
 - `arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForS3Restore` - Required for S3 restore operations
 
 ### Additional Available AWS Managed Policies
-You can attach up to 18 additional managed policies using the `additional_managed_policies` variable. Here are some commonly used AWS managed policies for backup operations:
+You can attach up to 16 additional managed policies using the `additional_managed_policies` variable. Here are some commonly used AWS managed policies for backup operations:
 
 #### Backup Operation Policies
 - `arn:aws:iam::aws:policy/AWSBackupFullAccess` - Full access to AWS Backup features
@@ -392,197 +248,6 @@ module "backup-plans" {
 }
 ```
 
-### Resource-Specific Backup Vaults
-
-#### RDS Database Backups
-```terraform
-module "rds-backup" {
-  source  = "USSBA/backup-plans/aws"
-  version = "~> 7.0"
-  
-  vault_name = "rds-backup-vault"
-  
-  # Target only RDS databases
-   = false
-  (selection now only by resource_arns and Environment=production tag) = ["AWS::RDS::DBInstance"]
-  
-  # Add RDS-specific policies
-  additional_managed_policies = [
-    "arn:aws:iam::aws:policy/AmazonRDSFullAccess"
-  ]
-}
-```
-
-#### S3 Bucket Backups
-```terraform
-module "s3-backup" {
-  source  = "USSBA/backup-plans/aws"
-  version = "~> 7.0"
-  
-  vault_name = "s3-backup-vault"
-  
-  # Target specific S3 buckets by tag
-   = true
-  backup_resource_tags = {
-    BackupS3 = "true"
-  }
-  
-  # S3 backup policies are included by default
-}
-```
-
-### Advanced Configuration
-
-```terraform
-module "custom-backup" {
-  source  = "USSBA/backup-plans/aws"
-  version = "~> 7.0"
-  
-  # Vault configuration
-  vault_name = "production-backups"
-  
-  # Backup schedule (runs daily at 2 AM UTC)
-  backup_schedule = "cron(0 2 * * ? *)"
-  
-  # Resource selection
-   = true
-  backup_resource_tags = {
-    Environment = "production"
-    Backup      = "enabled"
-  }
-  
-  # Exclude test resources
-  exclude_conditions = [
-    {
-      condition_type = "STRINGEQUALS"
-      key            = "aws:ResourceTag/Environment"
-      value          = "test"
-    }
-  ]
-  
-  # Cross-region backup
-  cross_region_backup_enabled = true
-  cross_region_destination   = "us-west-2"
-  
-  # Additional IAM policies
-  additional_managed_policies = [
-    "arn:aws:iam::aws:policy/AmazonRDSFullAccess",
-    "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess"
-  ]
-  
-  # Tags
-  tags = {
-    Terraform   = "true"
-    Environment = "production"
-  }
-  
-  tags_vault = {
-    BackupRetention = "90-days"
-  }
-  
-  tags_plan = {
-    BackupWindow = "daily"
-  }
-}
-```
-
-## Resource Targeting
-
-### Tag-Based Selection
-By default, the module uses tag-based selection to identify resources for backup. You can customize the tag key and value:
-
-```terraform
-module "tag-based-backup" {
-  source  = "USSBA/backup-plans/aws"
-  version = "~> 7.0"
-  
-     = "BackupPolicy"
-   = "daily"
-}
-```
-
-### Resource Type Selection
-For more control, you can specify resource types directly:
-
-```terraform
-module "type-based-backup" {
-  source  = "USSBA/backup-plans/aws"
-  version = "~> 7.0"
-  
-   = false
-  (selection now only by resource_arns and Environment=production tag) = [
-    "AWS::RDS::DBInstance",
-    "AWS::DynamoDB::Table",
-    "AWS::EFS::FileSystem"
-  ]
-}
-```
-
-### Advanced Resource Selection
-For complex scenarios, you can combine multiple selection methods:
-
-```terraform
-module "advanced-backup" {
-  source  = "USSBA/backup-plans/aws"
-  version = "~> 7.0"
-  
-  # Use tags for dynamic resources
-   = true
-  backup_resource_tags = {
-    Backup = "enabled"
-  }
-  
-  # Include specific resources by ARN
-  resource_arns = [
-    "arn:aws:rds:us-east-1:123456789012:db:production-db"
-  ]
-  
-  # Exclude resources with specific tags
-  exclude_conditions = [
-    {
-      condition_type = "STRINGEQUALS"
-      key            = "aws:ResourceTag/Environment"
-      value          = "test"
-    },
-    {
-      condition_type = "STRINGLIKE"
-      key            = "aws:ResourceTag/Name"
-      value          = "*-test-*"
-    }
-  ]
-}
-```
-
-## Cross-Region Backups
-
-To enable cross-region backups, simply set `cross_region_backup_enabled` to `true` and specify the destination region:
-
-```terraform
-module "cross-region-backup" {
-  source  = "USSBA/backup-plans/aws"
-  version = "~> 7.0"
-  
-  cross_region_backup_enabled = true
-  cross_region_destination   = "us-west-2"  # Destination region for backup copies
-  
-  # Optional: Customize the backup vault name in the destination region
-  vault_name = "primary-region-backups"
-}
-```
-
-## Monitoring and Notifications
-
-To receive notifications about backup events, specify an SNS topic ARN:
-
-```terraform
-module "backup-with-notifications" {
-  source  = "USSBA/backup-plans/aws"
-  version = "~> 7.0"
-  
-  sns_topic_arn = "arn:aws:sns:us-east-1:123456789012:backup-notifications"
-}
-```
-
 ## IAM Permissions
 
 ### Required Permissions
@@ -595,13 +260,13 @@ The IAM role created by this module requires the following permissions:
 - Plus various read permissions for resource discovery and monitoring
 
 ### Custom IAM Policies
-You can attach up to 18 additional managed policies to the backup service role. Some useful policies include:
+You can attach up to 16 additional managed policies to the backup service role. Some useful policies include:
 
 ```terraform
 module "backup-with-custom-policies" {
   source  = "USSBA/backup-plans/aws"
   version = "~> 7.0"
-  
+
   additional_managed_policies = [
     "arn:aws:iam::aws:policy/AmazonRDSFullAccess",
     "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess",
@@ -628,26 +293,6 @@ module "backup-with-custom-policies" {
 1. Verify the destination region is enabled in your AWS account
 2. Check if there are any VPC endpoint or network ACL restrictions
 3. Ensure the IAM role has permissions to create resources in the destination region
-
-  # Change the daily backup tag key-value to `AutoBackups = very-yes` for triggering
-     = "AutoBackups"
-   = "very-yes"
-}
-```
-
-### Cross-region
-
-To enable cross region copies of backup plans, you must set the `cross_region_backup_enabled` variable to true and optionally set the destination region (defaults to us-west-2)
-
-```terraform
-module "backup-plans" {
-  source  = "USSBA/backup-plans/aws"
-  version = "~> 7.0"
-
-  cross_region_backup_enabled = true
-  cross_region_destination = "us-west-2"
-}
-```
 
 ## Contributing
 

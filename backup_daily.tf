@@ -52,9 +52,7 @@ resource "aws_backup_selection" "daily" {
   name         = var.vault_name
   plan_id      = aws_backup_plan.daily.id
   iam_role_arn = aws_iam_role.service_role.arn
-
-  # At least 1 resource ARN must be provided
-  resources = var.resource_arns
+  resources    = var.resource_arns
 
   selection_tag {
     type  = "STRINGEQUALS"

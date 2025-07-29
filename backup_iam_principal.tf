@@ -18,8 +18,8 @@ locals {
   required_policies = [
     "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForBackup",
     "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForRestores",
-    #"arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForS3Backup",
-    #"arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForS3Restore"
+    "arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForS3Backup",
+    "arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForS3Restore"
   ]
 
   # Combine required policies with additional policies, ensuring no duplicates

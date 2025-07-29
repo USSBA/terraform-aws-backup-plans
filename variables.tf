@@ -55,19 +55,19 @@ variable "resource_arns" {
 
 variable "environment_tag_value" {
   type        = string
-  description = "Optional: The value of the Environment resource tag used in the aws_backup_selection. Default: 'prod'."
+  description = "Optional string value of the Environment resource tag used in the aws_backup_selection. Default: 'prod'."
   default     = "prod"
 }
 
 # Additional Managed Policies
 variable "additional_managed_policies" {
   type        = list(string)
-  description = "List of up to 18 additional IAM policy ARNs to attach to the backup service role. These are combined with the required AWS Backup policies for a maximum of 20 policies per role. Default: empty list."
+  description = "Optional List of up to 16 additional IAM policy ARNs to attach to the backup service role. These are combined with the required AWS Backup policies for a maximum of 20 policies per role. Default: empty list."
   default     = []
 
   validation {
-    condition     = length(var.additional_managed_policies) <= 18
-    error_message = "A maximum of 18 additional managed policies can be specified (20 total including required AWS Backup policies)."
+    condition     = length(var.additional_managed_policies) <= 16
+    error_message = "A maximum of 16 additional managed policies can be specified (20 total including required AWS Backup policies)."
   }
 }
 
@@ -77,3 +77,4 @@ variable "sns_topic_arn" {
   description = "ARN of the SNS topic to receive backup vault notifications (e.g., backup job completion, failures). Leave blank to disable notifications. Default: empty string."
   default     = ""
 }
+
