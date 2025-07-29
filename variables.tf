@@ -54,7 +54,7 @@ variable "resource_arns" {
   type        = list(string)
   description = "Required list of specific resource ARNs or ARN patterns to include in backup selection. Example: ['arn:aws:ec2:region:account-id:volume/*']."
   validation {
-    condition     = length(var.resource_arns) < 1
+    condition     = length(var.resource_arns) >= 1
     error_message = "Must provide at least 1 resource ARN: note that wildcard ARN match patterns may be used."
   }
 }
@@ -63,10 +63,6 @@ variable "environment_tag_value" {
   type        = string
   description = "Optional: The value of the Environment resource tag used in the aws_backup_selection. Default: 'prod'."
   default     = "prod"
-  validation {
-    condition     = length(var.environment_tag_value) < 1
-    error_message = "The environment_tag_value must contain at least 1 alphanumberic character."
-  }
 }
 
 # Additional Managed Policies
