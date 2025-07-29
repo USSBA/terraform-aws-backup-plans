@@ -17,12 +17,6 @@ variable "completion_window_minutes" {
   default     = 180
 }
 
-variable "opt_in_settings" {
-  type        = map(any)
-  description = "Region-specific opt-in settings for AWS Backup advanced features. Use the AWS CLI 'aws backup describe-region-settings' to see available options. Default: empty map."
-  default     = {}
-}
-
 # Cross-Region Backup Settings
 variable "cross_region_backup_enabled" {
   type        = bool
