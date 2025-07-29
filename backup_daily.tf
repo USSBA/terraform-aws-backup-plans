@@ -9,7 +9,7 @@ resource "aws_backup_vault" "daily" {
 }
 
 resource "aws_backup_vault" "daily_cross_region" {
-  for_each = var.cross_region_backup_enabled ? [1] : []
+  count = var.cross_region_backup_enabled ? 1 : 0
 
   name     = "${var.vault_name}-cross-region"
   provider = aws.cross_region
@@ -33,7 +33,7 @@ resource "aws_backup_plan" "daily" {
     }
 
     dynamic "copy_action" {
-      for_each = local.create_cross_region_resources ? [1] : []
+      for_each = var.cross_region_backup_enabled ? [1] : []
       content {
         destination_vault_arn = aws_backup_vault.daily_cross_region["cross_region"].arn
 
