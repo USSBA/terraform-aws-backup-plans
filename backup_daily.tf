@@ -54,15 +54,17 @@ resource "aws_backup_selection" "daily" {
   iam_role_arn = aws_iam_role.service_role.arn
   resources    = var.resource_arns
 
-  selection_tag {
-    type  = "STRINGEQUALS"
-    key   = "Environment"
-    value = var.environment_tag_value # default: 'prod'
-  }
+  condition {
+    selection_tag {
+      type  = "STRINGEQUALS"
+      key   = "Environment"
+      value = var.environment_tag_value # default: 'prod'
+    }
 
-  selection_tag {
-    type  = "STRINGEQUALS"
-    key   = "Backup"
-    value = "true"
+    selection_tag {
+      type  = "STRINGEQUALS"
+      key   = "Backup"
+      value = "true"
+    }
   }
 }
