@@ -31,7 +31,8 @@ To use this module, ensure you have the following:
 | `vault_name` | Name of the backup vault. | `string` | `"DefaultBackupVault"` | ❌ No |
 | `backup_schedule` | Cron expression for backup schedule. | `string` | `"cron(0 5 * * ? *)"` (5 AM UTC) | ❌ No |
 | `sns_topic_arn` | SNS topic ARN for backup vault notifications. | `string` | `""` | ❌ No |
-| `resource_arns` | Optional list of specific resource ARNs or ARN patterns to include in backup selection. If empty, the module will automatically discover all resources with Environment=prod tag. | `list(string)` | `[]` | ❌ No |
+| `backup_selection_resource_arns` | Required list of specific resource ARNs or ARN patterns to include in backup selection. Must provide at least one ARN or ARN pattern. | `list(string)` | `["*"]` | ❌ No |
+| `backup_selection_conditions` | Optional conditions that will be applied tot he ARNs or ARN patterns to further restrict the resrouces targted. | `object({string_equals, string_like, string_not_equals, string_not_like})` | `{string_equals = {}, string_list = {}, string_not_equals = {}, string_not_like = {}}` | ❌ No |
 | `additional_managed_policies` | Additional IAM policy ARNs (max 16) to attach to the backup service role. Combined with required AWS Backup policies (max 20 total). | `list(string)` | `[]` | ❌ No |
 
 ## Usage
@@ -54,12 +55,19 @@ provider "aws" {
 module "production_backup" {
   source = "path/to/terraform-aws-backup-plans"
 
-  backup_schedule             =  "cron(0 2 * * ? *)"  # 2 AM UTC daily
-  vault_name                  =  "production-rds-vault"
-  resource_arns               =  ["arn:aws:rds:us-east-1:000000000000:cluster:*"]
+  backup_schedule =  "cron(0 2 * * ? *)"  # 2 AM UTC daily
+  vault_name      =  "production-rds-vault"
+  backup_selection_resource_arns = [
+    "arn:aws:elasticfilesystem:us-east-1:000000000000:file-system/*",
+  ]
+  backup_selection_conditions = {
+    string_equals = {
+      "aws:ResourceTag/Environment" = "production"
+      "aws:ResourceTag/Backup"      = "true"
+    }
+  }
   cross_region_backup_enabled = true
   cross_region_destination    = "us-west-2"
-
   providers = {
     aws              = aws
     aws.cross_region = aws.cross_region
@@ -244,7 +252,7 @@ You can attach up to 16 additional managed policies using the `additional_manage
 ```terraform
 module "backup-plans" {
   source  = "USSBA/backup-plans/aws"
-  version = "~> 7.0"
+  version = "~> 9.0"
 }
 ```
 
@@ -265,7 +273,7 @@ You can attach up to 16 additional managed policies to the backup service role. 
 ```terraform
 module "backup-with-custom-policies" {
   source  = "USSBA/backup-plans/aws"
-  version = "~> 7.0"
+  version = "~> 9.0"
 
   additional_managed_policies = [
     "arn:aws:iam::aws:policy/AmazonRDSFullAccess",

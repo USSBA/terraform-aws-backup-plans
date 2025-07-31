@@ -43,20 +43,38 @@ variable "backup_schedule" {
   default     = "cron(0 5 * * ? *)"
 }
 
+variable "backup_schedule_timzone" {
+  type        = string
+  description = "Timezone for the backup_schedule. Default:' Etc/UTC'."
+  default     = "Etc/UTC"
+}
+
+
 # Resource Selection
-variable "resource_arns" {
+variable "backup_selection_resource_arns" {
   type        = list(string)
-  description = "Required list of specific resource ARNs or ARN patterns to include in backup selection. Example: ['arn:aws:ec2:region:account-id:volume/*']."
+  description = "Optional list of specific resource ARNs or ARN patterns to include in backup selection. Example: ['arn:aws:ec2:region:account-id:volume/*']. Default: [\"*\"]."
+  default     = ["*"]
   validation {
-    condition     = length(var.resource_arns) >= 1
-    error_message = "Must provide at least 1 resource ARN: note that wildcard ARN match patterns may be used."
+    condition     = length(var.backup_selection_resource_arns) > 0
+    error_message = "Must provide at least 1 ARN or ARN pattern."
   }
 }
 
-variable "environment_tag_value" {
-  type        = string
-  description = "Optional string value of the Environment resource tag used in the aws_backup_selection. Default: 'prod'."
-  default     = "prod"
+variable "backup_selection_conditions" {
+  type = object({
+    string_equals     = optional(map(string), {})
+    string_like       = optional(map(string), {})
+    string_not_equals = optional(map(string), {})
+    string_not_like   = optional(map(string), {})
+  })
+  description = "Optional set of conditions applied to the specified `backup_selection_resource_arns`."
+  default = {
+    string_equals     = {}
+    string_like       = {}
+    string_not_equals = {}
+    string_not_list   = {}
+  }
 }
 
 # Additional Managed Policies
