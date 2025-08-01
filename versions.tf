@@ -13,6 +13,6 @@ terraform {
 }
 
 provider "aws" {
-  alias = "cross-region"
+  alias  = "cross_region"
   region = var.cross_region_destination
 }
