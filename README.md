@@ -1,8 +1,45 @@
 # terraform-aws-backup-plans
 
-[![Integration Tests](https://github.com/USSBA/terraform-aws-backup-plans/actions/workflows/tests.yml/badge.svg)](https://github.com/USSBA/terraform-aws-backup-plans/actions/workflows/tests.yml)
+This module implements one or more AWS Backup vaults and backup plans. For each vault/plan pair, you pass:
 
-This module implements an AWS Backup solution that automatically backs up resources tagged with `Environment=prod` and `Backup=true` for a given set of matching ARN patterns.
+1. A list of resource ARNs (or ARN patterns) to back up (e.g. all RDS clusters, all EFS file systems, etc.)
+
+2. A set of tags to include or exclude (e.g. {Environment = "prod", Backup = "true"}).
+
+This lets you create separate vaults/plans per service (RDS, EFS, S3, etc.) with custom schedules, cross-region targets, and IAM roles.
+
+## Table Of Contents
+
+1. [Features](#features)
+2. [Prerequisites](#prerequisites)
+3. [Inputs](#inputs)
+4. [Usage](#usage)
+    - [Important Notes](#important-notes)
+5. [Vault Naming Convention](#vault-naming-convention)
+    - [Name Format](#name-format)
+    - [Migrating from Underscores to Hyphens](#migrating-from-underscores-to-hyphens)
+6. [Notes](#notes)
+7. [AWS Backup Managed Policies](#aws-backup-managed-policies)
+    - [Required Policies](#required-policies)
+    - [Additional Available AWS Managed Policies](#additional-available-aws-managed-policies)
+      - [Backup Operation Policies](#backup-operation-policies)
+      - [Service-Specific Backup Policies](#service-specific-backup-policies)
+    - [Service Quotas and Limits](#service-quotas-and-limits)
+      - [AWS Backup Service Limits](#aws-backup-service-limits)
+      - [IAM Service Limits](#iam-service-limits)
+      - [Cross-Region Backup](#cross-region-backup)
+7. [Best Practices](#best-practices)
+8. [IAM Permissions](#iam-permissions)
+9. [Troubleshooting](#troubleshooting)
+    - [Common Issues](#common-issues)
+      - [Backup Job Fails with "Insufficient Permissions"](#backup-job-fails-with-insufficient-permissions)
+      - [Resources Not Being Backed Up](#resources-not-being-backed-up)
+      - [Cross-Region Backup Fails](#cross-region-backup-fails)
+10. [Contributing](#contributing)
+11. [Code of Conduct](#code-of-conduct)
+12. [Security Policy](#security-policy)
+
+
 
 ## Features
 
@@ -15,7 +52,7 @@ This module implements an AWS Backup solution that automatically backs up resour
 
 To use this module, ensure you have the following:
 
-- **Terraform:** ~> 1.12.0
+- **Terraform:** ~> 1.9.5
 - **AWS Provider:** ~> 5.0
 - **AWS Account:** Configured with appropriate permissions
 
@@ -30,16 +67,13 @@ To use this module, ensure you have the following:
 | `cross_region_destination` | Destination region for cross-region backups. | `string` | `"us-west-2"` | ❌ No |
 | `vault_name` | Name of the backup vault. | `string` | `"DefaultBackupVault"` | ❌ No |
 | `backup_schedule` | Cron expression for backup schedule. | `string` | `"cron(0 5 * * ? *)"` (5 AM UTC) | ❌ No |
+| `backup_schedule_timzone` | Timezone for the backup_schedule. Default:' Etc/UTC'. | `string` | Etc/UTC | ❌ No |
 | `sns_topic_arn` | SNS topic ARN for backup vault notifications. | `string` | `""` | ❌ No |
 | `backup_selection_resource_arns` | Required list of specific resource ARNs or ARN patterns to include in backup selection. Must provide at least one ARN or ARN pattern. | `list(string)` | `["*"]` | ❌ No |
 | `backup_selection_conditions` | Optional conditions that will be applied tot he ARNs or ARN patterns to further restrict the resrouces targted. | `object({string_equals, string_like, string_not_equals, string_not_like})` | `{string_equals = {}, string_list = {}, string_not_equals = {}, string_not_like = {}}` | ❌ No |
 | `additional_managed_policies` | Additional IAM policy ARNs (max 16) to attach to the backup service role. Combined with required AWS Backup policies (max 20 total). | `list(string)` | `[]` | ❌ No |
 
 ## Usage
-
-### Opinionated (Recommended) - Auto-Discovery
-
-The simplest way to use this module is to let it automatically discover all your production resources:
 
 ```hcl
 provider "aws" {
@@ -51,25 +85,45 @@ provider "aws" {
   region = "us-west-2"
 }
 
-# Minimal configuration - backs up ALL resources tagged Environment=prod
-module "production_backup" {
-  source = "path/to/terraform-aws-backup-plans"
-
-  backup_schedule =  "cron(0 2 * * ? *)"  # 2 AM UTC daily
-  vault_name      =  "production-rds-vault"
+module "efs_backup" {
+  source  = "USSBA/backup-plans/aws"
+  version = "~> 9.0"
+  vault_name                   = "prod-efs-backup-vault"
+  backup_schedule              = "cron(0 3 * * ? *)"
   backup_selection_resource_arns = [
-    "arn:aws:elasticfilesystem:us-east-1:000000000000:file-system/*",
+    "arn:aws:elasticfilesystem:${var.region}:${data.aws_caller_identity.current.account_id}:file-system/*",
   ]
   backup_selection_conditions = {
     string_equals = {
-      "aws:ResourceTag/Environment" = "production"
-      "aws:ResourceTag/Backup"      = "true"
+      "aws:ResourceTag/Environment" = "prod"
+      "aws:ResourceTag/BackupType"   = "efs"
+      "aws:ResourceTag/Backup"       = "true"
+    }
+  }
+
+  providers = {
+    aws.cross_region = aws.cross_region
+  }
+}
+
+module "rds_backup" {
+  source  = "USSBA/backup-plans/aws"
+  version = "~> 9.0"-backup-vault"
+  backup_schedule              = "cron(0 4 * * ? *)"
+  backup_selection_resource_arns = [
+    "arn:aws:rds:${var.region}:${data.aws_caller_identity.current.account_id}:cluster:*",
+  ]
+  backup_selection_conditions = {
+    string_equals = {
+      "aws:ResourceTag/Environment" = "prod"
+      "aws:ResourceTag/BackupType"   = "rds"
+      "aws:ResourceTag/Backup"       = "true"
     }
   }
   cross_region_backup_enabled = true
   cross_region_destination    = "us-west-2"
+
   providers = {
-    aws              = aws
     aws.cross_region = aws.cross_region
   }
 }
@@ -77,7 +131,7 @@ module "production_backup" {
 
 ### Important Notes
 
-- **Tag Requirements**: Resources must be tagged with `Environment=prod` and `Backup=true` to be included in backups
+- **Tag Requirements**: Resources must be tagged with whatever keys/values you pass to `backup_selection_conditions`.
 - **Provider Configuration**: Cross-region provider is required even if cross-region backup is disabled
 
 ## Vault Naming Convention
@@ -148,22 +202,6 @@ When renaming a vault from using underscores to hyphens, follow these steps to e
    - Consider removing the old vault if it's no longer needed
    - You may want to keep it for a transition period to ensure everything works as expected
 
-### Example Vault Names
-
-```hcl
-# Recommended format with hyphens
-module "backup" {
-  source     = "USSBA/backup-plans/aws"
-  vault_name = "production-backup-vault"
-}
-
-# Deprecated format with underscores (avoid)
-module "backup_old" {
-  source     = "USSBA/backup-plans/aws"
-  vault_name = "production_backup_vault"  # Not recommended
-}
-```
-
 ## Notes
 
 - Cold storage is currently only supported for backups of Amazon EBS, Amazon EFS, Amazon DynamoDB, Amazon Timestream, SAP HANA on EC2, and VMware Backup.
@@ -173,6 +211,7 @@ module "backup_old" {
 ## AWS Backup Managed Policies
 
 ### Required Policies
+
 This module automatically attaches the following AWS managed policies to the backup service role:
 
 - `arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForBackup` - Required for backup operations
@@ -181,9 +220,11 @@ This module automatically attaches the following AWS managed policies to the bac
 - `arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForS3Restore` - Required for S3 restore operations
 
 ### Additional Available AWS Managed Policies
+
 You can attach up to 16 additional managed policies using the `additional_managed_policies` variable. Here are some commonly used AWS managed policies for backup operations:
 
 #### Backup Operation Policies
+
 - `arn:aws:iam::aws:policy/AWSBackupFullAccess` - Full access to AWS Backup features
 - `arn:aws:iam::aws:policy/AWSBackupOperatorAccess` - Permissions for backup operators
 - `arn:aws:iam::aws:policy/AWSBackupAuditAccess` - Read-only access to view backup configurations
@@ -191,75 +232,76 @@ You can attach up to 16 additional managed policies using the `additional_manage
 - `arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForRestores` - Permissions for restore operations
 
 #### Service-Specific Backup Policies
+
 - `arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForS3Backup` - For S3 backup operations
 - `arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForS3Restore` - For S3 restore operations
 - `arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForBackupTest` - For backup testing
 - `arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForSAPHANA` - For SAP HANA database backups
 
-### Service Quotas and Limits
+## Service Quotas and Limits
 
 #### AWS Backup Service Limits
+
 - **Backup Vaults**: 100 per AWS account per region (soft limit, can be increased)
 - **Backup Plans**: 100 per AWS account per region
 - **Recovery Points**: 100,000 per backup vault
 - **Resource Selection**: 500 resources per backup plan
 
 #### IAM Service Limits
+
 - **Managed Policies per Role**: 20 total (default limit of 10, can be increased to 20)
 - **Role Name Length**: 64 characters maximum
 - **Policy Size**: 6,144 characters maximum for managed policies
 - **Policy Document Size**: 10,240 characters maximum
 
 #### Cross-Region Backup
+
 - **Copy Jobs**: 10,000 per account per region
 - **Concurrent Copy Jobs**: 1,000 per account per region
 
 > **Note**: The default limit for managed policies per role is 10 (5 AWS-managed + 5 customer-managed). You can request an increase to 20 (10 AWS-managed + 10 customer-managed) through the AWS Support Center.
 
-### Best Practices
+## Best Practices
 
-#### Naming and Organization
-1. Use meaningful, descriptive names for `vault_name` and `service_role_name` to easily identify resources
+### Naming and Organization
+
+1. Use meaningful, descriptive names for `vault_name` to easily identify resources.
 2. Follow a consistent naming convention across all backup resources (e.g., `{env}-{app}-{purpose}`)
 3. Use tags consistently to manage and organize backup resources
 
-#### Policy Management
+### Policy Management
+
 1. When using `additional_managed_policies`, ensure they don't exceed the 20-policy limit per role
 2. Prefer using AWS managed policies over custom policies when possible
 3. Regularly review and audit IAM policies for least privilege access
 
-#### Resource Selection
+### Resource Selection
+
 1. Use tag-based resource selection (` = true`) for dynamic environments
 2. For static environments, consider using explicit resource ARNs for better control
 3. Use the `exclude_conditions` variable to filter out resources that shouldn't be backed up
 4. When backing up S3 buckets, ensure versioning is enabled for point-in-time recovery
 
-#### Monitoring and Maintenance
+### Monitoring and Maintenance
+
 1. Set up CloudWatch Alarms for backup job failures
 2. Monitor backup storage usage and retention periods
 3. Regularly test restores to ensure your backup strategy meets your recovery objectives
 4. Review and update backup policies as your infrastructure evolves
 
-#### Security
+### Security
+
 1. Enable encryption for all backup vaults (enabled by default)
 2. Use AWS KMS CMKs for encryption when additional control over encryption keys is required
 3. Implement backup vault access policies to restrict who can manage backups
 4. Enable MFA delete for critical backup vaults
 
-## Usage Examples
-
-### Basic Configuration
-```terraform
-module "backup-plans" {
-  source  = "USSBA/backup-plans/aws"
-  version = "~> 9.0"
-}
-```
-
 ## IAM Permissions
 
 ### Required Permissions
+
 The IAM role created by this module requires the following permissions:
+
 - `backup:CreateBackupVault`
 - `backup:CreateBackupPlan`
 - `backup:CreateBackupSelection`
@@ -268,6 +310,7 @@ The IAM role created by this module requires the following permissions:
 - Plus various read permissions for resource discovery and monitoring
 
 ### Custom IAM Policies
+
 You can attach up to 16 additional managed policies to the backup service role. Some useful policies include:
 
 ```terraform
@@ -288,16 +331,19 @@ module "backup-with-custom-policies" {
 ### Common Issues
 
 #### Backup Job Fails with "Insufficient Permissions"
+
 1. Verify the IAM role has the necessary permissions
 2. Check if the role's trust relationship allows the backup service to assume it
 3. Ensure any additional policies attached don't conflict with required permissions
 
 #### Resources Not Being Backed Up
+
 1. Verify the resource tags match your backup selection criteria
 2. Check if the resource type is supported by AWS Backup
 3. Ensure the IAM role has permissions to back up the specific resource type
 
 #### Cross-Region Backup Fails
+
 1. Verify the destination region is enabled in your AWS account
 2. Check if there are any VPC endpoint or network ACL restrictions
 3. Ensure the IAM role has permissions to create resources in the destination region
