@@ -9,31 +9,31 @@ data "aws_iam_policy_document" "service_link" {
 }
 
 resource "aws_iam_role" "service_role" {
-  count              = local.enabled_count
-  name               = "backup-service-role"
+  name               = "backup-service-role-${var.vault_name}"
   assume_role_policy = data.aws_iam_policy_document.service_link.json
 }
 
-resource "aws_iam_role_policy_attachment" "service_role_attachment" {
-  count      = local.enabled_count
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForBackup"
-  role       = var.enabled ? aws_iam_role.service_role[0].name : ""
+locals {
+  # Define required policies
+  required_policies = [
+    "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForBackup",
+    "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForRestores",
+    "arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForS3Backup",
+    "arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForS3Restore"
+  ]
+
+  # Combine required policies with additional policies, ensuring no duplicates
+  all_policies = distinct(concat(
+    local.required_policies,
+    var.additional_managed_policies
+  ))
 }
 
-resource "aws_iam_role_policy_attachment" "s3_service_role_attachment" {
-  count      = local.enabled_count
-  policy_arn = "arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForS3Backup"
-  role       = var.enabled ? aws_iam_role.service_role[0].name : ""
-}
+# Attach all policies to the IAM role using a single resource with for_each
+resource "aws_iam_role_policy_attachment" "managed_policies" {
+  depends_on = [aws_iam_role.service_role]
+  for_each   = toset(local.all_policies)
 
-resource "aws_iam_role_policy_attachment" "restore_service_role_attachment" {
-  count      = local.enabled_count
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForRestores"
-  role       = var.enabled ? aws_iam_role.service_role[0].name : ""
-}
-
-resource "aws_iam_role_policy_attachment" "s3_restore_service_role_attachment" {
-  count      = local.enabled_count
-  policy_arn = "arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForS3Restore"
-  role       = var.enabled ? aws_iam_role.service_role[0].name : ""
+  policy_arn = each.value
+  role       = aws_iam_role.service_role.name
 }

@@ -1,5 +1,12 @@
 # Releases
 
+## v9.0.0
+
+- Must provide a unique `vault_name` input variable and only a single vault will be provisioned per module configuration.
+- Must provide at least 1 ARN/pattern to the `backup_selection_resoruce_arns` input variable.
+- May optionally provide `backup_selection_conditions` input variable to futher restrict how the ARN match pattern targets resourcs to backup in the vault.
+- May optionally provide `additional_managed_policies` input variable to enhance the base level coverage of resurces by this module (e.g. Redshift may need additional polcies and may require the account to update opt-in settings)
+
 ## v8.0.0
 
 - Removed functionality for weekly and monthly backup plans.

@@ -1,82 +1,98 @@
-# Backup Configuration
-variable "enabled" {
-  type        = bool
-  description = "Optional; Enable/disable creation of all resources in this module. Defaults to true."
-  default     = true
+# Region Configuration
+variable "region" {
+  type        = string
+  description = "The AWS region in which all backup resources will be created. Applies to all resources unless overridden elsewhere. Default: us-east-1."
+  default     = "us-east-1"
 }
 
 variable "start_window_minutes" {
   type        = number
-  description = "Optional; Amount of time (in minutes) before starting a backup job. Defaults to 60."
+  description = "The amount of time (in minutes) before a backup job is allowed to start after being scheduled. Default: 60."
   default     = 60
 }
 
 variable "completion_window_minutes" {
   type        = number
-  description = "Optional; Amount of time (in minutes) a backup job can run before it is automatically canceled. Defaults to 180."
+  description = "The maximum amount of time (in minutes) a backup job can run before it is automatically canceled. Default: 180."
   default     = 180
 }
 
-variable "opt_in_settings" {
-  type        = map(any)
-  description = "Optional; Region-specific opt-in choices for AWS Backup. Use 'aws backup describe-region-settings' CLI command to see available options. Defaults to empty map."
-  default     = {}
-}
-
-# Cross Region Settings
+# Cross-Region Backup Settings
 variable "cross_region_backup_enabled" {
   type        = bool
-  description = "Optional; Enable/disable cross-region backups. Defaults to false."
+  description = "Whether to enable cross-region backup copies. If true, backups will be copied to another AWS region specified by 'cross_region_destination'. Default: false."
   default     = false
 }
 
 variable "cross_region_destination" {
   type        = string
-  description = "Optional; The region of the cross-region backup copy. Defaults to 'us-west-2'."
+  description = "The AWS region to which cross-region backup copies will be sent if enabled. Default: 'us-west-2'."
   default     = "us-west-2"
 }
 
-# Daily Backup Settings
-variable "daily_backup_enabled" {
-  type        = bool
-  description = "Optional; Enable/disable daily backups. Defaults to true."
-  default     = true
+# Vault Settings
+variable "vault_name" {
+  type        = string
+  description = "Name of the backup vault to create. Must be unique within your AWS account and region. Default: 'DefaultBackupVault'."
+  default     = "DefaultBackupVault"
 }
 
-variable "daily_backup_tag_key" {
+variable "backup_schedule" {
   type        = string
-  description = "Optional; Tag key for backing up resources daily. Defaults to 'BackupDaily'."
-  default     = "BackupDaily"
+  description = "Cron expression (in AWS format) that defines when the backup job runs. Example: 'cron(0 5 * * ? *)' runs daily at 5 AM UTC. Default: 'cron(0 5 * * ? *)'."
+  default     = "cron(0 5 * * ? *)"
 }
 
-variable "daily_backup_tag_value" {
+variable "backup_schedule_timzone" {
   type        = string
-  description = "Optional; Tag value for backing up resources daily. Defaults to 'true'."
-  default     = "true"
+  description = "Timezone for the backup_schedule. Default:' Etc/UTC'."
+  default     = "Etc/UTC"
+}
+
+
+# Resource Selection
+variable "backup_selection_resource_arns" {
+  type        = list(string)
+  description = "Optional list of specific resource ARNs or ARN patterns to include in backup selection. Example: ['arn:aws:ec2:region:account-id:volume/*']. Default: [\"*\"]."
+  default     = ["*"]
+  validation {
+    condition     = length(var.backup_selection_resource_arns) > 0
+    error_message = "Must provide at least 1 ARN or ARN pattern."
+  }
+}
+
+variable "backup_selection_conditions" {
+  type = object({
+    string_equals     = optional(map(string), {})
+    string_like       = optional(map(string), {})
+    string_not_equals = optional(map(string), {})
+    string_not_like   = optional(map(string), {})
+  })
+  description = "Optional set of conditions applied to the specified `backup_selection_resource_arns`."
+  default = {
+    string_equals     = {}
+    string_like       = {}
+    string_not_equals = {}
+    string_not_list   = {}
+  }
+}
+
+# Additional Managed Policies
+variable "additional_managed_policies" {
+  type        = list(string)
+  description = "Optional List of up to 16 additional IAM policy ARNs to attach to the backup service role. These are combined with the required AWS Backup policies for a maximum of 20 policies per role. Default: empty list."
+  default     = []
+
+  validation {
+    condition     = length(var.additional_managed_policies) <= 16
+    error_message = "A maximum of 16 additional managed policies can be specified (20 total including required AWS Backup policies)."
+  }
 }
 
 # Vault Notifications
 variable "sns_topic_arn" {
   type        = string
-  description = "Optional; Topic ARN where backup vault notifications are directed."
+  description = "ARN of the SNS topic to receive backup vault notifications (e.g., backup job completion, failures). Leave blank to disable notifications. Default: empty string."
   default     = ""
 }
 
-# Tags
-variable "tags" {
-  type        = map(any)
-  description = "Optional; Key-value map of tags for all applicable resources."
-  default     = {}
-}
-
-variable "tags_vault" {
-  type        = map(any)
-  description = "Optional; Key-value map of tags for backup vaults."
-  default     = {}
-}
-
-variable "tags_plan" {
-  type        = map(any)
-  description = "Optional; Key-value map of tags for backup plans."
-  default     = {}
-}
