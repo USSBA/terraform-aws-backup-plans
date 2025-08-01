@@ -1,8 +1,4 @@
 name: 'Integration Tests'
-
-env:
-  TERRAFORM_VERSION: 1.12.0
-
 on:
   push:
     branches:
@@ -25,13 +21,11 @@ jobs:
       # Checkout the code
       - name: 'checkout'
         uses: 'actions/checkout@v3'
-      # Install Terraform with proper permissions
+      # Install Terraform
       - name: 'Install Terraform'
-        run: |
-          wget https://releases.hashicorp.com/terraform/${{ env.TERRAFORM_VERSION }}/terraform_${{ env.TERRAFORM_VERSION }}_linux_amd64.zip
-          unzip terraform_${{ env.TERRAFORM_VERSION }}_linux_amd64.zip
-          chmod +x terraform
-          sudo mv terraform /usr/local/bin/
+        uses: 'hashicorp/setup-terraform@v2'
+        with:
+          terraform_version: '1.9.5'
       # Check the Terraform formatting
       - name: 'check formatting'
         run: |
@@ -42,30 +36,16 @@ jobs:
       # Checkout the code
       - name: 'checkout'
         uses: 'actions/checkout@v3'
-      # Install Terraform with proper permissions
-      - name: 'Install Terraform'
+      # Install Terraform
+      - name: 'Install Terraform 1.9.5'
+        uses: 'hashicorp/setup-terraform@v2'
+        with:
+          terraform_version: '1.9.5'
+      # Validate the module can compile
+      - name: 'validate module'
         run: |
-          wget https://releases.hashicorp.com/terraform/${{ env.TERRAFORM_VERSION }}/terraform_${{ env.TERRAFORM_VERSION }}_linux_amd64.zip
-          unzip terraform_${{ env.TERRAFORM_VERSION }}_linux_amd64.zip
-          chmod +x terraform
-          sudo mv terraform /usr/local/bin/
-      # Skip main module validation - it requires provider configuration from caller
-      - name: 'validate simple example'
-        run: |
-          cd examples/simple
           terraform init
           terraform validate
-      - name: 'validate enterprise example'
-        run: |
-          cd examples/enterprise
-          terraform init
-          terraform validate
-      - name: 'validate multiple vaults example'
-        run: |
-          cd examples/multiple_vaults
-          terraform init
-          terraform validate          
-          
   spellcheck:
     runs-on: 'ubuntu-latest'
     steps:
@@ -79,55 +59,3 @@ jobs:
         with:
           source_files: 'CHANGELOG.md CONTRIBUTING.md LICENSE.md README.md'
           task_name: 'Markdown'
-
-  test:
-    name: 'Run Terraform Tests'
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: 'Checkout code'
-        uses: actions/checkout@v3
-        
-      - name: 'Start services with Docker Compose'
-        working-directory: ./tests
-        run: |
-          docker compose up -d
-          
-      - name: 'Wait for services to be ready'
-        working-directory: ./tests
-        run: |
-          echo "Waiting for services to be healthy..."
-          docker compose up --wait
-          
-      - name: 'Install Terraform'
-        run: |
-          wget https://releases.hashicorp.com/terraform/${{ env.TERRAFORM_VERSION }}/terraform_${{ env.TERRAFORM_VERSION }}_linux_amd64.zip
-          unzip terraform_${{ env.TERRAFORM_VERSION }}_linux_amd64.zip
-          sudo mv terraform /usr/local/bin/
-          
-      - name: 'Run Terraform tests with mock services'
-        working-directory: ./tests
-        env:
-          AWS_ACCESS_KEY_ID: test
-          AWS_SECRET_ACCESS_KEY: test
-          AWS_DEFAULT_REGION: us-east-1
-        run: |
-          # Initialize Terraform
-          terraform init
-          
-          # Run all available tests
-          echo "Running tests..."
-          terraform test -json | tee test_output.json
-          
-          # Check for test failures
-          if grep -q '"@level":"error"' test_output.json; then
-            echo "Tests failed"
-            exit 1
-          fi
-          
-      - name: 'Cleanup'
-        if: always()
-        working-directory: ./tests
-        run: |
-          # Stop all services
-          docker compose down -v

@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 1.12.0"
+  required_version = "~> 1.9.5"
   required_providers {
     # AWS provider is required for backup vault, IAM role, and region settings resources
     # Cross-region provider (aws.cross_region) is optional and passed via providers block when needed
