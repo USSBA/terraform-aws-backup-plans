@@ -3,7 +3,6 @@
 ## v9.1.0
 
 - Updated Terraform core requirement from `~> 1.9.5` to `~> 1.12`.
-- Ensures compatibility with Terraform 1.12.2 used across SBA repositories.
 - No breaking configuration changes introduced in this release. Existing module inputs and outputs remain the same.
 
 ## v9.0.0
