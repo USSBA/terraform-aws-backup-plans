@@ -1,5 +1,10 @@
 # Releases
 
+## v9.1.0
+
+- Updated Terraform core requirement from `~> 1.9.5` to `~> 1.12`.
+- No breaking configuration changes introduced in this release. Existing module inputs and outputs remain the same.
+
 ## v9.0.0
 
 - Must provide a unique `vault_name` input variable and only a single vault will be provisioned per module configuration.

@@ -52,7 +52,7 @@ This lets you create separate vaults/plans per service (RDS, EFS, S3, etc.) with
 
 To use this module, ensure you have the following:
 
-- **Terraform:** ~> 1.9.5
+- **Terraform:** ~> 1.12
 - **AWS Provider:** ~> 5.0
 - **AWS Account:** Configured with appropriate permissions
 
